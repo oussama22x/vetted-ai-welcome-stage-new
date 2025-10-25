@@ -57,45 +57,7 @@ serve(async (req) => {
       );
     }
 
-    const upstashUrl = Deno.env.get('UPSTASH_REDIS_REST_URL');
-    const upstashToken = Deno.env.get('UPSTASH_REDIS_REST_TOKEN');
-    if (!upstashUrl || !upstashToken) {
-      throw new Error('Rate limiting environment variables are not configured');
-    }
-
-    const rateLimitKey = `parse-job-description:${user.id}`;
-    const rateLimitResponse = await fetch(`${upstashUrl}/pipeline`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${upstashToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([
-        ['INCR', rateLimitKey],
-        ['EXPIRE', rateLimitKey, 60],
-      ]),
-    });
-
-    if (!rateLimitResponse.ok) {
-      console.error('Failed to enforce rate limit:', rateLimitResponse.status, await rateLimitResponse.text());
-      throw new Error('Unable to enforce rate limit');
-    }
-
-    const rateLimitData = await rateLimitResponse.json();
-    const requestCount = Array.isArray(rateLimitData?.result)
-      ? Number(rateLimitData.result[0])
-      : undefined;
-
-    if (Number.isNaN(requestCount) || requestCount === undefined) {
-      throw new Error('Unexpected rate limit response');
-    }
-
-    if (requestCount > 10) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Please wait before retrying.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Rate limiting removed - relying on Lovable AI Gateway's workspace-level rate limits
 
     let parsedBody: unknown;
     try {
