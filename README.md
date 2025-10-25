@@ -75,3 +75,31 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 ## Ops Console access
 
 The admin Ops Console is now available at `/admin/ops`. Legacy links to `/ops` or `/admin/projects` automatically redirect to the new canonical route.
+
+## Setting up a fresh Supabase project
+
+If you fork this Lovable project into a new Supabase instance, you need to apply
+the checked-in migrations and regenerate the generated client types. The repo
+includes a helper script that wraps the required Supabase CLI commands:
+
+```sh
+# Install the Supabase CLI first if you have not already.
+# https://supabase.com/docs/guides/cli/getting-started
+
+# From the repository root
+scripts/setup-supabase.sh
+```
+
+The script will:
+
+1. Link the repo to your Supabase project (you will be prompted for the project
+   ref unless `SUPABASE_PROJECT_REF` is set; set `SUPABASE_DB_PASSWORD` to skip
+   the password prompt).
+2. Apply every migration under `supabase/migrations/` to your remote database via
+   `supabase db push`.
+3. Regenerate the client types in `src/integrations/supabase/types.ts` so the
+   front end is aware of the new schema.
+
+After it completes, the new Supabase project will have the same schema, security
+policies, and storage configuration as the original app but without any of the
+data from the source environment.
