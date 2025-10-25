@@ -1,0 +1,18 @@
+<svg width="1024" height="512" viewBox="0 0 1024 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="512" fill="white"/>
+  <g transform="translate(180 128)">
+    <path d="M592.548 12.645l21.01 43.59 43.71 21.095-43.71 21.095-21.01 43.59-21.01-43.59-43.71-21.095 43.71-21.095 21.01-43.59z" fill="url(#paint0_linear)"/>
+    <text x="0" y="130" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="160" font-weight="600" fill="#5D3BEF" letter-spacing="2">
+      vetted
+    </text>
+    <text x="470" y="130" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="160" font-weight="600" fill="#4B1FD1" letter-spacing="2">
+      ai
+    </text>
+  </g>
+  <defs>
+    <linearGradient id="paint0_linear" x1="613.558" y1="12.645" x2="613.558" y2="142.02" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9A6CFF"/>
+      <stop offset="1" stop-color="#4B1FD1"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* VettedAI Design System – Light, Premium, Proof-Driven */
+    --background: 30 14% 97%;
+    --foreground: 225 15% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 15% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 15% 13%;
+
+    /* Signal Purple – Primary Brand */
+    --primary: 249 54% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 249 90% 85%;
+
+    /* Lavender – Secondary Accent */
+    --secondary: 249 100% 92%;
+    --secondary-foreground: 249 54% 56%;
+
+    /* Muted States */
+    --muted: 249 30% 96%;
+    --muted-foreground: 225 8% 45%;
+
+    /* Accent (Hover, Active) */
+    --accent: 249 60% 95%;
+    --accent-foreground: 249 54% 56%;
+
+    /* Feedback Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 249 20% 90%;
+    --input: 249 20% 90%;
+    --ring: 249 54% 56%;
+
+    --radius: 0.75rem;
+    
+    /* Custom Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(249 54% 56% / 0.05);
+    --shadow-md: 0 4px 12px -2px hsl(249 54% 56% / 0.08);
+    --shadow-lg: 0 10px 24px -4px hsl(249 54% 56% / 0.12);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 225 15% 13%;
+    --foreground: 0 0% 98%;
+
+    --card: 225 20% 16%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 225 20% 16%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 249 54% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 249 70% 70%;
+
+    --secondary: 249 30% 25%;
+    --secondary-foreground: 249 100% 92%;
+
+    --muted: 225 20% 20%;
+    --muted-foreground: 225 8% 65%;
+
+    --accent: 249 30% 22%;
+    --accent-foreground: 249 100% 92%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 62% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 225 20% 24%;
+    --input: 225 20% 24%;
+    --ring: 249 70% 70%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Custom Utilities */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+  }
+
+  .shadow-elegant {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.3);
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-fast {
+    transition: var(--transition-fast);
+  }
+}
+
+@layer components {
+  .landing-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background-color: transparent;
+    box-shadow: none;
+    transition: all 0.3s ease-in-out;
+  }
+
+  .nav-scrolled {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+}

@@ -1,0 +1,4 @@
+project_id = "cwtmnradflkatpryoavd"
+
+[functions.parse-job-description]
+verify_jwt = true
