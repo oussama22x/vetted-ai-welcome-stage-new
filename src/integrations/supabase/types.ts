@@ -14,16 +14,339 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_whitelist: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          project_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          shortlist_file_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          shortlist_file_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          shortlist_file_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          project_id: string
+          status: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          project_id: string
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          candidate_count: number | null
+          candidate_source: string | null
+          candidates_completed: number | null
+          completed_at: string | null
+          completion_percentage: number | null
+          created_at: string | null
+          hours_elapsed: number | null
+          id: string
+          job_summary: string | null
+          payment_status: string | null
+          recruiter_id: string
+          role_title: string
+          sla_deadline: string | null
+          status: string | null
+          tier_id: number | null
+          tier_name: string | null
+          total_candidates: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_count?: number | null
+          candidate_source?: string | null
+          candidates_completed?: number | null
+          completed_at?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          hours_elapsed?: number | null
+          id?: string
+          job_summary?: string | null
+          payment_status?: string | null
+          recruiter_id: string
+          role_title: string
+          sla_deadline?: string | null
+          status?: string | null
+          tier_id?: number | null
+          tier_name?: string | null
+          total_candidates?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_count?: number | null
+          candidate_source?: string | null
+          candidates_completed?: number | null
+          completed_at?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          hours_elapsed?: number | null
+          id?: string
+          job_summary?: string | null
+          payment_status?: string | null
+          recruiter_id?: string
+          role_title?: string
+          sla_deadline?: string | null
+          status?: string | null
+          tier_id?: number | null
+          tier_name?: string | null
+          total_candidates?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_recruiter_id_fkey"
+            columns: ["recruiter_id"]
+            isOneToOne: false
+            referencedRelation: "recruiters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruiters: {
+        Row: {
+          company_name: string | null
+          company_size: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          referral_source: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          company_size?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          referral_source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          company_size?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          referral_source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
+      talent_profiles: {
+        Row: {
+          file_name: string
+          file_path: string
+          id: string
+          parsed_email: string | null
+          parsed_name: string | null
+          project_id: string
+          status: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          id?: string
+          parsed_email?: string | null
+          parsed_name?: string | null
+          project_id: string
+          status?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          id?: string
+          parsed_email?: string | null
+          parsed_name?: string | null
+          project_id?: string
+          status?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_project_for_current_user: {
+        Args: {
+          p_candidate_count: number
+          p_candidate_source: string
+          p_job_summary: string
+          p_role_title: string
+          p_tier_id: number
+          p_tier_name: string
+        }
+        Returns: string
+      }
+      get_projects_for_current_user: {
+        Args: never
+        Returns: {
+          candidate_count: number
+          created_at: string
+          id: string
+          payment_status: string
+          role_title: string
+          status: string
+          tier_name: string
+        }[]
+      }
+      grant_admin_role: { Args: { user_email: string }; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_email_whitelisted: { Args: { email: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "recruiter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +473,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "recruiter"],
+    },
   },
 } as const
