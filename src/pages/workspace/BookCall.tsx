@@ -91,15 +91,12 @@ export default function BookCall() {
     
     const { data: projectId, error } = await supabase
       .rpc('create_project_for_current_user', {
-        _role_title: roleTitle,
-        _job_description: jobDescription,
-        _job_summary: jobSummary,
-        _tier_id: selectedTier.id,
-        _tier_name: selectedTier.name,
-        _anchor_price: selectedTier.anchorPrice,
-        _pilot_price: selectedTier.pilotPrice,
-        _candidate_source: candidateSource,
-        _candidate_count: candidateCount,
+        p_role_title: roleTitle,
+        p_job_summary: jobSummary,
+        p_candidate_source: candidateSource,
+        p_tier_name: selectedTier.name,
+        p_tier_id: selectedTier.id,
+        p_candidate_count: candidateCount,
       });
 
     if (error) {

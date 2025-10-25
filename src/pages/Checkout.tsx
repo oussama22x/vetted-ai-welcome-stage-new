@@ -83,16 +83,12 @@ const Checkout = () => {
       // Create project using server-side RPC
       const { data: projectId, error: projectError } = await supabase
         .rpc('create_project_for_current_user', {
-          _user_id: user.id,
-          _role_title: roleTitle,
-          _job_description: wizardState.jobDescription || '',
-          _job_summary: wizardState.jobSummary || '',
-          _tier_id: parseInt(selectedTier.id.toString()),
-          _tier_name: selectedTier.name,
-          _anchor_price: parseFloat(selectedTier.anchorPrice.toString()),
-          _pilot_price: parseFloat(selectedTier.pilotPrice.toString()),
-          _candidate_source: candidateSource || 'own',
-          _candidate_count: candidateCount || 0,
+          p_role_title: roleTitle,
+          p_job_summary: wizardState.jobSummary || '',
+          p_candidate_source: candidateSource || 'own',
+          p_tier_name: selectedTier.name,
+          p_tier_id: parseInt(selectedTier.id.toString()),
+          p_candidate_count: candidateCount || 0,
         });
 
       if (projectError) {

@@ -8,7 +8,6 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface Project {
   id: string;
-  project_code: string;
   role_title: string;
   tier_name: string;
   candidate_source: string;
@@ -20,7 +19,6 @@ interface Project {
   recruiter: {
     full_name: string;
     email: string;
-    organization: { name: string } | null;
   };
   talent_profiles: Array<{ count: number }>;
 }
@@ -59,7 +57,7 @@ export const ProjectsTable = ({ projects, onViewResumes, onUploadShortlist }: Pr
                   <div>
                     <p className="font-medium text-sm">{project.recruiter.full_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {project.recruiter.organization?.name || project.recruiter.email}
+                      {project.recruiter.email}
                     </p>
                   </div>
                 </td>

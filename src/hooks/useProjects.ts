@@ -17,7 +17,7 @@ export const useProjects = (filters?: ProjectFilters) => {
         .from('projects')
         .select(`
           *,
-          recruiter:recruiters!inner(id, full_name, email, organization:organizations(name)),
+          recruiter:recruiters!inner(id, full_name, email),
           talent_profiles(count)
         `);
 

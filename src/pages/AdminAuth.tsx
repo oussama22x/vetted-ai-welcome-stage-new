@@ -176,7 +176,7 @@ export default function AdminAuth() {
 
       // Check if email is whitelisted using RPC after user creation
       const { data: isWhitelisted, error: whitelistError } = await supabase
-        .rpc('is_email_whitelisted', { _email: normalizedEmail });
+        .rpc('is_email_whitelisted', { email: normalizedEmail });
 
       if (whitelistError) {
         console.error('Whitelist check error:', whitelistError);
@@ -210,7 +210,7 @@ export default function AdminAuth() {
 
         // Grant admin role when session is active
         const { error: roleError } = await supabase.rpc('grant_admin_role', {
-          _email: normalizedEmail
+          user_email: normalizedEmail
         });
 
         if (roleError) {
