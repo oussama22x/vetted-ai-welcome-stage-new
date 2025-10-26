@@ -300,9 +300,9 @@ async function callAiGateway(jdText: string): Promise<RoleDefinitionResult> {
   }
 
   try {
-    return coerceJson<RoleDefinitionResult>(args);
+    return JSON.parse(args) as RoleDefinitionResult;
   } catch (error) {
-    console.error("Failed to parse tool call arguments (first 500 chars):", args.substring(0, 500));
+    console.error("Failed to parse AI tool call arguments:", args);
     throw new Error("AI response was not valid JSON");
   }
 }
