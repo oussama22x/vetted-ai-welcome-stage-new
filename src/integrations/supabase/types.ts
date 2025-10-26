@@ -346,7 +346,7 @@ export type Database = {
       is_email_whitelisted: { Args: { email: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "recruiter"
+      app_role: "admin" | "recruiter" | "ops_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -474,7 +474,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "recruiter"],
+      app_role: ["admin", "recruiter", "ops_manager"],
     },
   },
 } as const
