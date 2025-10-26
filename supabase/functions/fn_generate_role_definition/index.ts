@@ -43,7 +43,7 @@ function buildErrorResponse(message: string, status: number): Response {
   });
 }
 
-async function getAuthenticatedClient(authHeader: string | null) {
+async function ensureAuthenticatedUser(authHeader: string | null) {
   if (!authHeader?.startsWith("Bearer ")) {
     throw Object.assign(new Error("Unauthorized"), { status: 401 });
   }
@@ -67,8 +67,6 @@ async function getAuthenticatedClient(authHeader: string | null) {
   if (error || !user) {
     throw Object.assign(new Error("Unauthorized"), { status: 401 });
   }
-
-  return client;
 }
 
 async function callAiGateway(jdText: string) {
@@ -76,6 +74,8 @@ async function callAiGateway(jdText: string) {
   if (!apiKey) {
     throw new Error("LOVABLE_API_KEY is not configured");
   }
+
+  console.log("Using NEW v2 system prompt.");
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -150,7 +150,7 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    await getAuthenticatedClient(authHeader);
+    await ensureAuthenticatedUser(authHeader);
 
     let body: RoleDefinitionPayload;
     try {
@@ -166,6 +166,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const result = await callAiGateway(jd_text.trim());
 
+    console.log("Function execution complete.");
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
