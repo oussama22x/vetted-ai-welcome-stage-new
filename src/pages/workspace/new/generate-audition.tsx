@@ -156,9 +156,9 @@ const GenerateAudition = () => {
 
     const newProjectId = typeof projectIdResponse === "string"
       ? projectIdResponse
-      : Array.isArray(projectIdResponse) && projectIdResponse.length > 0
-        ? String(projectIdResponse[0])
-        : null;
+      : (Array.isArray(projectIdResponse) && (projectIdResponse as any[]).length > 0
+        ? String((projectIdResponse as any[])[0])
+        : null);
 
     if (!newProjectId) {
       throw new Error("The draft project could not be created");
@@ -248,23 +248,29 @@ const GenerateAudition = () => {
     queryFn: generateInitialAudition,
     refetchOnWindowFocus: false,
     retry: 1,
-    onSuccess: (data) => {
+  });
+
+  useEffect(() => {
+    if (query.data) {
       setIsLoading(false);
       setError(null);
-      setProjectId(data.project_id);
-      saveWizardState({ project_id: data.project_id, projectId: data.project_id });
-      setRoleDefinition(data.roleDefinitionData);
-      setContextFlags(data.contextFlags);
-      setClarifierQuestions(data.clarifierQuestionsData);
+      setProjectId(query.data.project_id);
+      saveWizardState({ project_id: query.data.project_id, projectId: query.data.project_id });
+      setRoleDefinition(query.data.roleDefinitionData);
+      setContextFlags(query.data.contextFlags);
+      setClarifierQuestions(query.data.clarifierQuestionsData);
       setClarifierResponses({});
-      setScaffold(data.scaffoldData);
-    },
-    onError: (err) => {
-      console.error("Initial audition generation failed", err);
+      setScaffold(query.data.scaffoldData);
+    }
+  }, [query.data]);
+
+  useEffect(() => {
+    if (query.error) {
+      console.error("Initial audition generation failed", query.error);
       setIsLoading(false);
-      setError(err instanceof Error ? err.message : "Failed to build your audition.");
-    },
-  });
+      setError(query.error instanceof Error ? query.error.message : "Failed to build your audition.");
+    }
+  }, [query.error]);
 
   useEffect(() => {
     if (query.isLoading || query.isFetching) {
@@ -304,7 +310,7 @@ const GenerateAudition = () => {
         .from("role_definitions")
         .insert({
           project_id: projectId,
-          definition_data: roleDefinition,
+          definition_data: roleDefinition as any,
         })
         .select("id")
         .single();
@@ -321,9 +327,9 @@ const GenerateAudition = () => {
 
       const { error: scaffoldInsertError } = await supabase.from("audition_scaffolds").insert({
         role_definition_id: roleDefinitionId,
-        scaffold_data: scaffold.scaffold_data,
+        scaffold_data: scaffold.scaffold_data as any,
         scaffold_preview_html: scaffold.scaffold_preview_html,
-        definition_snapshot: roleDefinition,
+        definition_snapshot: roleDefinition as any,
       });
 
       if (scaffoldInsertError) {

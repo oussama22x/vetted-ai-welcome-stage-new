@@ -414,6 +414,14 @@ export type Database = {
       }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_email_whitelisted: { Args: { email: string }; Returns: boolean }
+      mark_project_awaiting_setup_call: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
+      update_project_status: {
+        Args: { p_new_status: string; p_project_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "recruiter" | "ops_manager"
