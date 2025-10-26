@@ -22,7 +22,7 @@ create policy "Recruiters can see candidates in their organization"
       select 1
       from public.projects p
       join public.recruiters r
-        on r.organization_id = p.organization_id
+        on p.recruiter_id = r.id
       where p.id = public.talent_profiles.project_id
         and r.user_id = auth.uid()
     )
@@ -37,7 +37,7 @@ create policy "Recruiters can update candidates in their organization"
       select 1
       from public.projects p
       join public.recruiters r
-        on r.organization_id = p.organization_id
+        on p.recruiter_id = r.id
       where p.id = public.talent_profiles.project_id
         and r.user_id = auth.uid()
     )
@@ -47,7 +47,7 @@ create policy "Recruiters can update candidates in their organization"
       select 1
       from public.projects p
       join public.recruiters r
-        on r.organization_id = p.organization_id
+        on p.recruiter_id = r.id
       where p.id = public.talent_profiles.project_id
         and r.user_id = auth.uid()
     )
