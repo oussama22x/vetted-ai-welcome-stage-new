@@ -44,6 +44,7 @@ export interface WizardState {
   candidateCount?: number;
   selectedTier?: TierInfo;
   projectId?: string;
+  project_id?: string;
   proofOfWorkTask?: string;
   evaluationCriteria?: Array<{
     name: string;
