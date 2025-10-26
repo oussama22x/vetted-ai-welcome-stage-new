@@ -64,6 +64,47 @@ export type Database = {
           },
         ]
       }
+      audition_scaffolds: {
+        Row: {
+          created_at: string | null
+          definition_snapshot: Json | null
+          id: string
+          role_definition_id: string
+          scaffold_data: Json
+          scaffold_preview_html: string | null
+          updated_at: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string | null
+          definition_snapshot?: Json | null
+          id?: string
+          role_definition_id: string
+          scaffold_data: Json
+          scaffold_preview_html?: string | null
+          updated_at?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string | null
+          definition_snapshot?: Json | null
+          id?: string
+          role_definition_id?: string
+          scaffold_data?: Json
+          scaffold_preview_html?: string | null
+          updated_at?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audition_scaffolds_role_definition_id_fkey"
+            columns: ["role_definition_id"]
+            isOneToOne: true
+            referencedRelation: "role_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluations: {
         Row: {
           created_at: string | null
@@ -244,6 +285,35 @@ export type Database = {
         }
         Relationships: []
       }
+      role_definitions: {
+        Row: {
+          created_at: string | null
+          definition_data: Json
+          id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          definition_data: Json
+          id?: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string | null
+          definition_data?: Json
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_definitions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       talent_profiles: {
         Row: {
           file_name: string
@@ -346,7 +416,7 @@ export type Database = {
       is_email_whitelisted: { Args: { email: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "recruiter"
+      app_role: "admin" | "recruiter" | "ops_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -474,7 +544,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "recruiter"],
+      app_role: ["admin", "recruiter", "ops_manager"],
     },
   },
 } as const
