@@ -183,7 +183,22 @@ const GenerateAudition = () => {
       throw new Error("Job description missing. Please return to the previous step.");
     }
 
-    const draftProjectId = projectId ?? (await createDraftProject());
+    let currentProjectId = projectId ?? wizardState.project_id ?? null;
+
+    if (!currentProjectId) {
+      console.log("No project_id in wizard state, creating new draft project...");
+      const newProjectId = await createDraftProject();
+
+      if (!newProjectId) {
+        throw new Error("Failed to create draft project.");
+      }
+
+      currentProjectId = newProjectId;
+      saveWizardState({ project_id: currentProjectId, projectId: currentProjectId });
+      console.log("Saved new project_id to wizard state:", currentProjectId);
+    } else {
+      console.log("Using existing project_id from wizard state:", currentProjectId);
+    }
 
     const { data: definitionRaw, error: definitionError } = await supabase.functions.invoke(
       "fn_generate_role_definition",
@@ -234,7 +249,7 @@ const GenerateAudition = () => {
     );
 
     return {
-      project_id: draftProjectId,
+      project_id: currentProjectId,
       roleDefinitionData: definitionData,
       contextFlags: context,
       clarifierQuestionsData: clarifiers,
