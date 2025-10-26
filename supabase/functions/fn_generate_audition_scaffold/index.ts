@@ -40,6 +40,23 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function coerceJson<T>(raw: string): T {
+  let cleaned = raw.trim();
+  
+  // Strip markdown code fences
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+  
+  // Fallback: extract innermost {...}
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    cleaned = match[0];
+  }
+  
+  return JSON.parse(cleaned) as T;
+}
+
 const SYSTEM_PROMPT = `You are an expert Audition Designer, bound by the VettedAI Proof-of-Work Model.
 Your job is to take a "Role Definition" and "Context Flags" and generate a "Proof Scaffold" and "Candidate Preview".
 
@@ -473,9 +490,9 @@ serve(async (req: Request): Promise<Response> => {
 
     let structuredResult: AiScaffoldResponse;
     try {
-      structuredResult = JSON.parse(rawContent);
+      structuredResult = coerceJson<AiScaffoldResponse>(rawContent);
     } catch (parseError) {
-      console.error("Failed to parse AI JSON payload:", rawContent);
+      console.error("Failed to parse AI response (first 500 chars):", rawContent.substring(0, 500));
       throw new Error("AI response was not valid JSON");
     }
 

@@ -13,7 +13,8 @@ Your only job is to parse any Job Description (JD) and extract:
 1.  The "9 Essentials of a Role".
 2.  The "Context Flags" needed to select dimensions.
 3.  "Clarifier Questions" for any gaps.
-Output Format: You must return only a valid JSON object.
+
+Always call the extract_role_data function with properly structured arguments. Do not include markdown or code fences in any values.
 
 JSON Schema: { "definition_data": { "goals": "...", "stakeholders": "...", "decision_horizon": "...", "tools": "...", "kpis": "...", "constraints": "...", "cognitive_type": "Analytical" | "Creative" | "Procedural" | "Not specified", "team_topology": "Solo" | "Cross-functional" | "Not specified", "cultural_tone": "..." }, "context_flags": { "role_family": "Product Mgmt" | "Engineering" | "Sales" | "Operations" | "Design / UX" | "Compliance / Risk" | "Finance" | "Marketing" | "Human Resources" | "Customer Support" | "Leadership / Strat" | "Growth PM" | "RevOps" | "UX Research" | "Other", "seniority": "Junior" | "Senior" | "Manager" | "Not specified", "is_startup_context": true | false, "is_people_management": true | false }, "clarifier_questions": [ "Who is the primary audience for their deliverables?" ] }
 
@@ -76,6 +77,23 @@ type AiGatewayResponse = {
     };
   }>;
 };
+
+function coerceJson<T>(raw: string): T {
+  let cleaned = raw.trim();
+  
+  // Strip markdown code fences
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+  
+  // Fallback: extract innermost {...}
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    cleaned = match[0];
+  }
+  
+  return JSON.parse(cleaned) as T;
+}
 
 function buildErrorResponse(message: string, status: number): Response {
   return new Response(JSON.stringify({ error: message }), {
@@ -282,9 +300,9 @@ async function callAiGateway(jdText: string): Promise<RoleDefinitionResult> {
   }
 
   try {
-    return JSON.parse(args) as RoleDefinitionResult;
+    return coerceJson<RoleDefinitionResult>(args);
   } catch (error) {
-    console.error("Failed to parse AI tool call arguments:", args);
+    console.error("Failed to parse tool call arguments (first 500 chars):", args.substring(0, 500));
     throw new Error("AI response was not valid JSON");
   }
 }
