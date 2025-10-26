@@ -337,15 +337,6 @@ const GenerateAudition = () => {
         throw new Error(scaffoldInsertError.message || "Could not save the audition scaffold");
       }
 
-      const { error: projectUpdateError } = await supabase
-        .from("projects")
-        .update({ status: "awaiting_deployment" })
-        .eq("id", projectId);
-
-      if (projectUpdateError) {
-        console.error("Failed to update project status", projectUpdateError);
-        throw new Error(projectUpdateError.message || "Could not update the project status");
-      }
     },
     onSuccess: () => {
       toast({
