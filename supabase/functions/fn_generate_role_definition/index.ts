@@ -128,9 +128,25 @@ async function callAiGateway(jdText: string) {
     throw new Error("AI response was empty");
   }
 
+  const markdownPrefix = "```json\n";
+  const markdownSuffix = "\n```";
+  const markdownPrefixCrlf = "```json\r\n";
+  const markdownSuffixCrlf = "\r\n```";
+
+  let jsonStringToParse = raw;
+
+  if (raw.startsWith(markdownPrefix) && raw.endsWith(markdownSuffix)) {
+    jsonStringToParse = raw.substring(markdownPrefix.length, raw.length - markdownSuffix.length);
+  } else if (raw.startsWith(markdownPrefixCrlf) && raw.endsWith(markdownSuffixCrlf)) {
+    jsonStringToParse = raw.substring(
+      markdownPrefixCrlf.length,
+      raw.length - markdownSuffixCrlf.length,
+    );
+  }
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(jsonStringToParse);
   } catch (error) {
     console.error("Failed to parse AI JSON payload:", raw);
     throw new Error("AI response was not valid JSON");
