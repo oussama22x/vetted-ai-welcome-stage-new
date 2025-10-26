@@ -28,10 +28,51 @@ type RoleDefinitionPayload = {
   jd_text?: unknown;
 };
 
+type RoleDefinitionResult = {
+  definition_data: {
+    goals: string;
+    stakeholders: string;
+    decision_horizon: string;
+    tools: string;
+    kpis: string;
+    constraints: string;
+    cognitive_type: "Analytical" | "Creative" | "Procedural" | "Not specified";
+    team_topology: "Solo" | "Cross-functional" | "Not specified";
+    cultural_tone: string;
+  };
+  context_flags: {
+    role_family:
+      | "Product Mgmt"
+      | "Engineering"
+      | "Sales"
+      | "Operations"
+      | "Design / UX"
+      | "Compliance / Risk"
+      | "Finance"
+      | "Marketing"
+      | "Human Resources"
+      | "Customer Support"
+      | "Leadership / Strat"
+      | "Growth PM"
+      | "RevOps"
+      | "UX Research"
+      | "Other";
+    seniority: "Junior" | "Senior" | "Manager" | "Not specified";
+    is_startup_context: boolean;
+    is_people_management: boolean;
+  };
+  clarifier_questions: string[];
+};
+
 type AiGatewayResponse = {
   choices?: Array<{
     message?: {
-      content?: string | Array<{ text?: string }>;
+      tool_calls?: Array<{
+        function?: {
+          name?: string;
+          arguments?: string;
+        };
+      }>;
     };
   }>;
 };
@@ -69,7 +110,7 @@ async function ensureAuthenticatedUser(authHeader: string | null) {
   }
 }
 
-async function callAiGateway(jdText: string) {
+async function callAiGateway(jdText: string): Promise<RoleDefinitionResult> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) {
     throw new Error("LOVABLE_API_KEY is not configured");
@@ -92,6 +133,123 @@ async function callAiGateway(jdText: string) {
           content: `Analyze this job description and return the structured data as JSON.\n\n${jdText}`,
         },
       ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "extract_role_data",
+            description: "Extract structured role definition data using the VettedAI Proof-of-Work Model.",
+            parameters: {
+              type: "object",
+              properties: {
+                definition_data: {
+                  type: "object",
+                  properties: {
+                    goals: { type: "string", description: "Top 2-3 objectives for the role." },
+                    stakeholders: {
+                      type: "string",
+                      description: "Key stakeholders and collaborators for this role.",
+                    },
+                    decision_horizon: {
+                      type: "string",
+                      description: "How far ahead the role typically makes decisions.",
+                    },
+                    tools: { type: "string", description: "Primary tools or platforms mentioned." },
+                    kpis: { type: "string", description: "KPIs or success metrics used." },
+                    constraints: {
+                      type: "string",
+                      description: "Major constraints or guardrails impacting the role.",
+                    },
+                    cognitive_type: {
+                      type: "string",
+                      enum: ["Analytical", "Creative", "Procedural", "Not specified"],
+                      description: "Dominant cognitive demand of the role.",
+                    },
+                    team_topology: {
+                      type: "string",
+                      enum: ["Solo", "Cross-functional", "Not specified"],
+                      description: "Team structure or collaboration model.",
+                    },
+                    cultural_tone: {
+                      type: "string",
+                      description: "Notable cultural tone or working style cues.",
+                    },
+                  },
+                  required: [
+                    "goals",
+                    "stakeholders",
+                    "decision_horizon",
+                    "tools",
+                    "kpis",
+                    "constraints",
+                    "cognitive_type",
+                    "team_topology",
+                    "cultural_tone",
+                  ],
+                  additionalProperties: false,
+                },
+                context_flags: {
+                  type: "object",
+                  properties: {
+                    role_family: {
+                      type: "string",
+                      enum: [
+                        "Product Mgmt",
+                        "Engineering",
+                        "Sales",
+                        "Operations",
+                        "Design / UX",
+                        "Compliance / Risk",
+                        "Finance",
+                        "Marketing",
+                        "Human Resources",
+                        "Customer Support",
+                        "Leadership / Strat",
+                        "Growth PM",
+                        "RevOps",
+                        "UX Research",
+                        "Other",
+                      ],
+                      description: "Role family classification based on responsibilities.",
+                    },
+                    seniority: {
+                      type: "string",
+                      enum: ["Junior", "Senior", "Manager", "Not specified"],
+                      description: "Seniority level inferred from the JD.",
+                    },
+                    is_startup_context: {
+                      type: "boolean",
+                      description: "Whether the JD signals a startup or 0-to-1 environment.",
+                    },
+                    is_people_management: {
+                      type: "boolean",
+                      description: "Whether the role requires managing people or direct reports.",
+                    },
+                  },
+                  required: [
+                    "role_family",
+                    "seniority",
+                    "is_startup_context",
+                    "is_people_management",
+                  ],
+                  additionalProperties: false,
+                },
+                clarifier_questions: {
+                  type: "array",
+                  description: "Follow-up clarifier questions needed to complete missing essentials.",
+                  items: {
+                    type: "string",
+                    description: "Single clarifier question addressing a missing data point.",
+                  },
+                },
+              },
+              required: ["definition_data", "context_flags", "clarifier_questions"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "extract_role_data" } },
     }),
   });
 
@@ -111,48 +269,24 @@ async function callAiGateway(jdText: string) {
   }
 
   const payload = (await response.json()) as AiGatewayResponse;
-  const content = payload?.choices?.[0]?.message?.content;
+  const toolCall = payload?.choices?.[0]?.message?.tool_calls?.[0];
 
-  if (!content) {
-    throw new Error("AI response did not include any content");
+  if (!toolCall || toolCall.function?.name !== "extract_role_data") {
+    throw new Error("AI did not return expected tool call");
   }
 
-  const raw = Array.isArray(content)
-    ? content
-        .map((part) => (typeof part === "string" ? part : part?.text ?? ""))
-        .join("")
-        .trim()
-    : content.trim();
+  const args = toolCall.function.arguments;
 
-  if (!raw) {
-    throw new Error("AI response was empty");
+  if (!args) {
+    throw new Error("AI response did not include tool call arguments");
   }
 
-  const markdownPrefix = "```json\n";
-  const markdownSuffix = "\n```";
-  const markdownPrefixCrlf = "```json\r\n";
-  const markdownSuffixCrlf = "\r\n```";
-
-  let jsonStringToParse = raw;
-
-  if (raw.startsWith(markdownPrefix) && raw.endsWith(markdownSuffix)) {
-    jsonStringToParse = raw.substring(markdownPrefix.length, raw.length - markdownSuffix.length);
-  } else if (raw.startsWith(markdownPrefixCrlf) && raw.endsWith(markdownSuffixCrlf)) {
-    jsonStringToParse = raw.substring(
-      markdownPrefixCrlf.length,
-      raw.length - markdownSuffixCrlf.length,
-    );
-  }
-
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(jsonStringToParse);
+    return JSON.parse(args) as RoleDefinitionResult;
   } catch (error) {
-    console.error("Failed to parse AI JSON payload:", raw);
+    console.error("Failed to parse AI tool call arguments:", args);
     throw new Error("AI response was not valid JSON");
   }
-
-  return parsed;
 }
 
 serve(async (req: Request): Promise<Response> => {
