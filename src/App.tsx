@@ -16,6 +16,7 @@ import JdUpload from "./pages/workspace/JdUpload";
 // import CandidatePreview from "./pages/workspace/CandidatePreview";
 import GenerateAudition from "./pages/workspace/new/generate-audition";
 import DeployOptions from "./pages/workspace/new/deploy-options";
+import NetworkConfirmed from "./pages/workspace/new/network-confirmed";
 import Checkout from "./pages/Checkout";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import AccountSettings from "./pages/AccountSettings";
@@ -69,6 +70,11 @@ const App = () => {
                 <Route path="/workspace/new/deploy-options" element={
                   <ProtectedRoute>
                     <DeployOptions />
+                  </ProtectedRoute>
+                } />
+                <Route path="/workspace/new/network-confirmed" element={
+                  <ProtectedRoute>
+                    <NetworkConfirmed />
                   </ProtectedRoute>
                 } />
 

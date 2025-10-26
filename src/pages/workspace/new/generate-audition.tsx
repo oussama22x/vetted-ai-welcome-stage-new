@@ -61,6 +61,14 @@ interface ScaffoldResponse {
   scaffold_preview_html: string;
 }
 
+interface InitialAuditionResult {
+  project_id: string;
+  roleDefinitionData: RoleDefinitionData;
+  contextFlags: ContextFlags;
+  clarifierQuestionsData: string[];
+  scaffoldData: ScaffoldResponse;
+}
+
 const DEFAULT_CONTEXT_FLAGS: ContextFlags = {
   role_family: "Other",
   seniority: "Not specified",
@@ -170,7 +178,7 @@ const GenerateAudition = () => {
     return newProjectId;
   };
 
-  const generateInitialAudition = async () => {
+  const generateInitialAudition = async (): Promise<InitialAuditionResult> => {
     if (!wizardState.jdContent) {
       throw new Error("Job description missing. Please return to the previous step.");
     }
@@ -226,11 +234,11 @@ const GenerateAudition = () => {
     );
 
     return {
-      projectId: draftProjectId,
-      definition: definitionData,
-      context,
-      clarifiers,
-      scaffold: scaffoldResponse,
+      project_id: draftProjectId,
+      roleDefinitionData: definitionData,
+      contextFlags: context,
+      clarifierQuestionsData: clarifiers,
+      scaffoldData: scaffoldResponse,
     };
   };
 
@@ -243,13 +251,13 @@ const GenerateAudition = () => {
     onSuccess: (data) => {
       setIsLoading(false);
       setError(null);
-      setProjectId(data.projectId);
-      setRoleDefinition(data.definition);
-      setContextFlags(data.context);
-      setClarifierQuestions(data.clarifiers);
+      setProjectId(data.project_id);
+      saveWizardState({ project_id: data.project_id, projectId: data.project_id });
+      setRoleDefinition(data.roleDefinitionData);
+      setContextFlags(data.contextFlags);
+      setClarifierQuestions(data.clarifierQuestionsData);
       setClarifierResponses({});
-      setScaffold(data.scaffold);
-      saveWizardState({ projectId: data.projectId });
+      setScaffold(data.scaffoldData);
     },
     onError: (err) => {
       console.error("Initial audition generation failed", err);
