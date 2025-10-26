@@ -14,10 +14,9 @@ import JdUpload from "./pages/workspace/JdUpload";
 // Archived - see src/pages/workspace/_archive/
 // import JdConfirm from "./pages/workspace/JdConfirm";
 // import CandidatePreview from "./pages/workspace/CandidatePreview";
-import MagicMoment from "./pages/workspace/MagicMoment";
-import CandidateSource from "./pages/workspace/CandidateSource";
-import BookCall from "./pages/workspace/BookCall";
-import TierSelection from "./pages/workspace/TierSelection";
+import GenerateAudition from "./pages/workspace/new/generate-audition";
+import DeployOptions from "./pages/workspace/new/deploy-options";
+import NetworkConfirmed from "./pages/workspace/new/network-confirmed";
 import Checkout from "./pages/Checkout";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import AccountSettings from "./pages/AccountSettings";
@@ -63,28 +62,19 @@ const App = () => {
                     <JdUpload />
                   </ProtectedRoute>
                 } />
-                <Route path="/workspace/new/magic-moment" element={
+                <Route path="/workspace/new/generate-audition" element={
                   <ProtectedRoute>
-                    <MagicMoment />
+                    <GenerateAudition />
                   </ProtectedRoute>
                 } />
-                {/* Active wizard routes */}
-                <Route path="/workspace/new/candidate-source" element={
+                <Route path="/workspace/new/deploy-options" element={
                   <ProtectedRoute>
-                    <CandidateSource />
+                    <DeployOptions />
                   </ProtectedRoute>
                 } />
-                <Route path="/workspace/new/tier-selection" element={
+                <Route path="/workspace/new/network-confirmed" element={
                   <ProtectedRoute>
-                    <TierSelection />
-                  </ProtectedRoute>
-                } />
-                {/* Archived routes - commented out, see src/pages/workspace/_archive/ */}
-                {/* <Route path="/workspace/new/jd-confirm" element={<ProtectedRoute><JdConfirm /></ProtectedRoute>} /> */}
-                {/* <Route path="/workspace/new/candidate-preview" element={<ProtectedRoute><CandidatePreview /></ProtectedRoute>} /> */}
-                <Route path="/workspace/new/book-call" element={
-                  <ProtectedRoute>
-                    <BookCall />
+                    <NetworkConfirmed />
                   </ProtectedRoute>
                 } />
 
