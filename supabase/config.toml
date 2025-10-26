@@ -1,1 +1,13 @@
 project_id = "jnazyoirpxxybqparypd"
+
+[functions.fn_generate_role_definition]
+verify_jwt = true
+
+[functions.fn_generate_audition_scaffold]
+verify_jwt = true
+
+[functions.parse-job-description]
+verify_jwt = true
+
+[functions.secure-shortlist-upload]
+verify_jwt = true

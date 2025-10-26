@@ -172,8 +172,8 @@ serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    const status = error instanceof Error && typeof (error as { status?: number }).status === "number"
-      ? (error as { status: number }).status
+    const status = error instanceof Error && typeof (error as any).status === "number"
+      ? (error as any).status
       : 500;
     const message = error instanceof Error ? error.message : "Unexpected error";
 
