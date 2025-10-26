@@ -148,7 +148,7 @@ export default function JdUpload() {
         experienceLevel,
       });
 
-      navigate("/workspace/new/candidate-source");
+      navigate("/workspace/new/generate-audition");
     } catch (error) {
       console.error("Failed to parse JD:", error);
       const normalizedError =

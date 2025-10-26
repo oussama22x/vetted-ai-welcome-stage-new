@@ -17,7 +17,7 @@ export const EmptyProjectsState = ({ onStartProject }: EmptyProjectsStateProps) 
       </h2>
       
       <p className="text-muted-foreground text-center max-w-md mb-6">
-        Looks like you haven't started any projects yet! Click the button above to create your first VettedAI project and get started.
+        Looks like you haven't started any projects yet! Click "Start New Project" below to create your first VettedAI project and get started.
       </p>
       
       <Button onClick={onStartProject} size="lg">
