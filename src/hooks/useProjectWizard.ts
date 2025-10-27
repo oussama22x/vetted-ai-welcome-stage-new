@@ -21,6 +21,31 @@ export interface TierInfo {
   output?: string;
 }
 
+export interface RoleDefinitionDetails {
+  goals: string;
+  stakeholders: string;
+  decision_horizon: string;
+  tools: string;
+  kpis: string;
+  constraints: string;
+  cognitive_type: string;
+  team_topology: string;
+  cultural_tone: string;
+}
+
+export interface RoleContextFlags {
+  role_family: string;
+  seniority: string;
+  is_startup_context: boolean;
+  is_people_management: boolean;
+}
+
+export interface FinalRoleDefinitionState {
+  roleDefinition: RoleDefinitionDetails;
+  contextFlags: RoleContextFlags;
+  clarifierResponses: Record<string, string>;
+}
+
 export interface UploadedFile {
   id?: string;
   file?: File;
@@ -50,6 +75,7 @@ export interface WizardState {
     name: string;
     description: string;
   }>;
+  finalRoleDefinition?: FinalRoleDefinitionState;
 }
 
 const STORAGE_KEY = 'project_wizard_state';

@@ -148,7 +148,7 @@ export default function JdUpload() {
         experienceLevel,
       });
 
-      navigate("/workspace/new/generate-audition");
+      navigate("/workspace/new/confirm-role-summary");
     } catch (error) {
       console.error("Failed to parse JD:", error);
       const normalizedError =
