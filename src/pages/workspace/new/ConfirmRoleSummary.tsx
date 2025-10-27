@@ -325,7 +325,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="goals"
                           label="Goals"
-                          tooltip="Think results, not just tasks. e.g., \"Increase user signups,\" \"Reduce customer churn\""
+                          tooltip={"Think results, not just tasks. e.g., \"Increase user signups,\" \"Reduce customer churn\""}
                         />
                         <Textarea
                           id="goals"
@@ -340,7 +340,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="stakeholders"
                           label="Stakeholders"
-                          tooltip="e.g., \"Engineering, Sales,\" \"External clients,\" \"Exec team\""
+                          tooltip={"e.g., \"Engineering, Sales,\" \"External clients,\" \"Exec team\""}
                         />
                         <Textarea
                           id="stakeholders"
@@ -355,7 +355,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="decision-horizon"
                           label="Decision Horizon"
-                          tooltip="e.g., \"Daily optimizations,\" \"Quarterly strategy,\" \"High-stakes calls\""
+                          tooltip={"e.g., \"Daily optimizations,\" \"Quarterly strategy,\" \"High-stakes calls\""}
                         />
                         <Textarea
                           id="decision-horizon"
@@ -370,7 +370,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="tools"
                           label="Tools"
-                          tooltip="e.g., \"Figma, Jira,\" \"Salesforce,\" \"Python, AWS\""
+                          tooltip={"e.g., \"Figma, Jira,\" \"Salesforce,\" \"Python, AWS\""}
                         />
                         <Textarea
                           id="tools"
@@ -385,7 +385,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="kpis"
                           label="KPIs"
-                          tooltip="e.g., \"Conversion rate,\" \"Revenue growth,\" \"Feature adoption\""
+                          tooltip={"e.g., \"Conversion rate,\" \"Revenue growth,\" \"Feature adoption\""}
                         />
                         <Textarea
                           id="kpis"
@@ -400,7 +400,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="constraints"
                           label="Constraints"
-                          tooltip="e.g., \"GDPR compliance,\" \"Budget limits,\" \"Legacy tech\""
+                          tooltip={"e.g., \"GDPR compliance,\" \"Budget limits,\" \"Legacy tech\""}
                         />
                         <Textarea
                           id="constraints"
@@ -461,7 +461,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="cultural-tone"
                           label="Cultural Tone"
-                          tooltip="e.g., \"Fast-paced, Agile,\" \"Formal, Regulated,\" \"Collaborative, Research-driven\""
+                          tooltip={"e.g., \"Fast-paced, Agile,\" \"Formal, Regulated,\" \"Collaborative, Research-driven\""}
                         />
                         <Textarea
                           id="cultural-tone"
