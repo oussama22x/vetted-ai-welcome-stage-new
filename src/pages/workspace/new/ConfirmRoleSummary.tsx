@@ -18,26 +18,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
-import { useProjectWizard } from "@/hooks/useProjectWizard";
+import {
+  useProjectWizard,
+  type FinalRoleDefinitionState,
+  type RoleContextFlags,
+  type RoleDefinitionDetails,
+  type TierInfo,
+} from "@/hooks/useProjectWizard";
 
-interface RoleDefinitionData {
-  goals: string;
-  stakeholders: string;
-  decision_horizon: string;
-  tools: string;
-  kpis: string;
-  constraints: string;
-  cognitive_type: string;
-  team_topology: string;
-  cultural_tone: string;
-}
-
-interface ContextFlags {
-  role_family: string;
-  seniority: string;
-  is_startup_context: boolean;
-  is_people_management: boolean;
-}
+type RoleDefinitionData = RoleDefinitionDetails;
+type ContextFlags = RoleContextFlags;
+type ConfirmPayload = FinalRoleDefinitionState;
 
 interface RoleDefinitionResponse {
   definition_data?: RoleDefinitionData;
@@ -51,10 +42,9 @@ interface RoleSummaryQueryResult {
   clarifierQuestions: string[];
 }
 
-interface ConfirmPayload {
-  roleDefinition: RoleDefinitionData;
-  contextFlags: ContextFlags;
-  clarifierResponses: Record<string, string>;
+interface ConfirmMutationResult {
+  project_id: string;
+  finalRoleDefinition: ConfirmPayload;
 }
 
 const EMPTY_ROLE_DEFINITION: RoleDefinitionData = {
@@ -74,6 +64,15 @@ const DEFAULT_CONTEXT_FLAGS: ContextFlags = {
   seniority: "Not specified",
   is_startup_context: false,
   is_people_management: false,
+};
+
+const FALLBACK_TIER: TierInfo = {
+  id: 0,
+  name: "Custom Proof",
+  description: "Default tier for audition setup",
+  anchorPrice: 0,
+  pilotPrice: 0,
+  features: [],
 };
 
 const COGNITIVE_TYPE_OPTIONS = ["Analytical", "Creative", "Procedural", "Not specified"];
@@ -139,7 +138,7 @@ const FieldLabel = ({ htmlFor, label, tooltip }: { htmlFor: string; label: strin
 
 const ConfirmRoleSummary = () => {
   const navigate = useNavigate();
-  const { wizardState } = useProjectWizard();
+  const { wizardState, saveWizardState } = useProjectWizard();
 
   const [roleDefinition, setRoleDefinition] = useState<RoleDefinitionData | null>(null);
   const [contextFlags, setContextFlags] = useState<ContextFlags | null>(null);
@@ -228,8 +227,81 @@ const ConfirmRoleSummary = () => {
     }
   }, [roleDefinitionQuery.data, hasInitializedFromQuery]);
 
-  const confirmMutation = useMutation({
-    mutationFn: async (payload: ConfirmPayload) => payload,
+  const confirmMutation = useMutation<ConfirmMutationResult, Error, ConfirmPayload>({
+    mutationFn: async payload => {
+      const jobDescription = wizardState.jdContent ?? wizardState.jobDescription;
+
+      if (!jobDescription) {
+        throw new Error(
+          "Missing job description. Please return to the previous step and upload it again.",
+        );
+      }
+
+      const finalRoleDefinition: ConfirmPayload = {
+        roleDefinition: payload.roleDefinition,
+        contextFlags: payload.contextFlags,
+        clarifierResponses: payload.clarifierResponses,
+      };
+
+      const roleTitle = wizardState.roleTitle?.trim() || "Pending Role Title";
+      const jobSummary = wizardState.jobSummary?.trim() || "";
+      const candidateSource = wizardState.candidateSource || "network";
+      const uploadedResumeCount = wizardState.uploadedResumes?.length ?? 0;
+      const candidateCount =
+        candidateSource === "own"
+          ? wizardState.candidateCount ?? uploadedResumeCount
+          : wizardState.candidateCount ?? 0;
+
+      const tier = wizardState.selectedTier ?? FALLBACK_TIER;
+
+      const { data: projectId, error: projectError } = await supabase
+        .rpc("create_project_for_current_user", {
+          _role_title: roleTitle,
+          _job_description: jobDescription,
+          _job_summary: jobSummary,
+          _tier_id: tier.id,
+          _tier_name: tier.name,
+          _anchor_price: tier.anchorPrice ?? 0,
+          _pilot_price: tier.pilotPrice ?? 0,
+          _candidate_source: candidateSource,
+          _candidate_count: candidateCount,
+        });
+
+      if (projectError) {
+        console.error("Failed to create project", projectError);
+        throw new Error(
+          projectError.message || "We couldn't create your project. Please try again.",
+        );
+      }
+
+      const project_id = typeof projectId === "string" ? projectId : null;
+
+      if (!project_id) {
+        throw new Error("We couldn't create your project. Please try again.");
+      }
+
+      const { error: roleDefinitionError } = await supabase.from("role_definitions").insert({
+        project_id,
+        definition_data: finalRoleDefinition,
+      });
+
+      if (roleDefinitionError) {
+        console.error("Failed to save role definition", roleDefinitionError);
+        throw new Error(
+          roleDefinitionError.message ||
+            "We couldn't save your role definition. Please try again.",
+        );
+      }
+
+      return { project_id, finalRoleDefinition };
+    },
+    onSuccess: data => {
+      saveWizardState({
+        project_id: data.project_id,
+        finalRoleDefinition: data.finalRoleDefinition,
+      });
+      navigate("/workspace/new/generate-audition");
+    },
   });
 
   const updateRoleDefinition = <K extends keyof RoleDefinitionData>(
@@ -254,6 +326,10 @@ const ConfirmRoleSummary = () => {
       return;
     }
 
+    if (confirmMutation.isPending) {
+      return;
+    }
+
     confirmMutation.mutate({
       roleDefinition,
       contextFlags,
@@ -272,6 +348,11 @@ const ConfirmRoleSummary = () => {
     roleDefinitionQuery.error instanceof Error
       ? roleDefinitionQuery.error.message
       : "We couldn't load the role definition. Please try again.";
+
+  const confirmErrorMessage =
+    confirmMutation.error instanceof Error
+      ? confirmMutation.error.message
+      : "We couldn't confirm your role definition. Please try again.";
 
   const isGenerating = roleDefinitionQuery.isLoading && !roleDefinition;
 
@@ -295,6 +376,13 @@ const ConfirmRoleSummary = () => {
             <Alert variant="destructive">
               <AlertTitle>Unable to load your role DNA</AlertTitle>
               <AlertDescription>{queryErrorMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {confirmMutation.isError && (
+            <Alert variant="destructive">
+              <AlertTitle>Unable to confirm your role DNA</AlertTitle>
+              <AlertDescription>{confirmErrorMessage}</AlertDescription>
             </Alert>
           )}
 
@@ -325,7 +413,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="goals"
                           label="Goals"
-                          tooltip={"Think results, not just tasks. e.g., \"Increase user signups,\" \"Reduce customer churn\""}
+                          tooltip="Think results, not just tasks. e.g., \"Increase user signups,\" \"Reduce customer churn\""
                         />
                         <Textarea
                           id="goals"
@@ -340,7 +428,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="stakeholders"
                           label="Stakeholders"
-                          tooltip={"e.g., \"Engineering, Sales,\" \"External clients,\" \"Exec team\""}
+                          tooltip="e.g., \"Engineering, Sales,\" \"External clients,\" \"Exec team\""
                         />
                         <Textarea
                           id="stakeholders"
@@ -355,7 +443,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="decision-horizon"
                           label="Decision Horizon"
-                          tooltip={"e.g., \"Daily optimizations,\" \"Quarterly strategy,\" \"High-stakes calls\""}
+                          tooltip="e.g., \"Daily optimizations,\" \"Quarterly strategy,\" \"High-stakes calls\""
                         />
                         <Textarea
                           id="decision-horizon"
@@ -370,7 +458,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="tools"
                           label="Tools"
-                          tooltip={"e.g., \"Figma, Jira,\" \"Salesforce,\" \"Python, AWS\""}
+                          tooltip="e.g., \"Figma, Jira,\" \"Salesforce,\" \"Python, AWS\""
                         />
                         <Textarea
                           id="tools"
@@ -385,7 +473,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="kpis"
                           label="KPIs"
-                          tooltip={"e.g., \"Conversion rate,\" \"Revenue growth,\" \"Feature adoption\""}
+                          tooltip="e.g., \"Conversion rate,\" \"Revenue growth,\" \"Feature adoption\""
                         />
                         <Textarea
                           id="kpis"
@@ -400,7 +488,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="constraints"
                           label="Constraints"
-                          tooltip={"e.g., \"GDPR compliance,\" \"Budget limits,\" \"Legacy tech\""}
+                          tooltip="e.g., \"GDPR compliance,\" \"Budget limits,\" \"Legacy tech\""
                         />
                         <Textarea
                           id="constraints"
@@ -461,7 +549,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="cultural-tone"
                           label="Cultural Tone"
-                          tooltip={"e.g., \"Fast-paced, Agile,\" \"Formal, Regulated,\" \"Collaborative, Research-driven\""}
+                          tooltip="e.g., \"Fast-paced, Agile,\" \"Formal, Regulated,\" \"Collaborative, Research-driven\""
                         />
                         <Textarea
                           id="cultural-tone"
