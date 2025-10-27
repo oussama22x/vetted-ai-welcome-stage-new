@@ -113,24 +113,42 @@ const parseEdgeResponse = <T,>(payload: unknown, errorMessage: string): T => {
   }
 };
 
-const FieldLabel = ({ htmlFor, label, tooltip }: { htmlFor: string; label: string; tooltip: string }) => (
+interface FieldLabelProps {
+  htmlFor: string;
+  label: string;
+  definition: string;
+  examples?: string;
+}
+
+const FieldLabel = ({ htmlFor, label, definition, examples }: FieldLabelProps) => (
   <div className="flex items-center gap-2">
     <Label htmlFor={htmlFor} className="text-sm font-medium">
       {label}
     </Label>
-    <Tooltip>
+    <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="text-muted-foreground transition-colors hover:text-foreground"
-          aria-label={tooltip}
+          className="text-muted-foreground transition-colors hover:text-foreground cursor-help"
+          aria-label={`${definition}${examples ? ` Examples: ${examples}` : ''}`}
         >
           <Info className="h-4 w-4" />
-          <span className="sr-only">{tooltip}</span>
+          <span className="sr-only">{definition}{examples && ` Examples: ${examples}`}</span>
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" align="start" className="max-w-xs">
-        <p className="text-sm leading-relaxed">{tooltip}</p>
+      <TooltipContent 
+        side="top" 
+        align="start" 
+        className="max-w-[280px] sm:max-w-xs"
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium leading-relaxed">{definition}</p>
+          {examples && (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <span className="font-medium">Examples:</span> {examples}
+            </p>
+          )}
+        </div>
       </TooltipContent>
     </Tooltip>
   </div>
@@ -413,7 +431,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="goals"
                           label="Goals"
-                          tooltip={"Think results, not just tasks. e.g., \"Increase user signups,\" \"Reduce customer churn\""}
+                          definition="The primary results or impact this role is responsible for achieving."
+                          examples="Increase user signups, Reduce customer churn"
                         />
                         <Textarea
                           id="goals"
@@ -428,7 +447,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="stakeholders"
                           label="Stakeholders"
-                          tooltip={"e.g., \"Engineering, Sales,\" \"External clients,\" \"Exec team\""}
+                          definition="The key internal or external groups this role interacts with or influences."
+                          examples="Engineering, Sales, External clients, Exec team"
                         />
                         <Textarea
                           id="stakeholders"
@@ -443,7 +463,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="decision-horizon"
                           label="Decision Horizon"
-                          tooltip={"e.g., \"Daily optimizations,\" \"Quarterly strategy,\" \"High-stakes calls\""}
+                          definition="The timeframe and level of impact of the decisions this role makes."
+                          examples="Daily optimizations, Quarterly strategy, High-stakes calls"
                         />
                         <Textarea
                           id="decision-horizon"
@@ -458,7 +479,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="tools"
                           label="Tools"
-                          tooltip={"e.g., \"Figma, Jira,\" \"Salesforce,\" \"Python, AWS\""}
+                          definition="Essential software, platforms, or methodologies used in the role."
+                          examples="Figma, Jira, Salesforce, Python, AWS"
                         />
                         <Textarea
                           id="tools"
@@ -473,7 +495,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="kpis"
                           label="KPIs"
-                          tooltip={"e.g., \"Conversion rate,\" \"Revenue growth,\" \"Feature adoption\""}
+                          definition="Key Performance Indicators used to track the role's effectiveness."
+                          examples="Conversion rate, Revenue growth, Feature adoption"
                         />
                         <Textarea
                           id="kpis"
@@ -488,7 +511,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="constraints"
                           label="Constraints"
-                          tooltip={"e.g., \"GDPR compliance,\" \"Budget limits,\" \"Legacy tech\""}
+                          definition="Important limitations, regulations, or environmental factors affecting the role."
+                          examples="GDPR compliance, Budget limits, Legacy tech"
                         />
                         <Textarea
                           id="constraints"
@@ -503,7 +527,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="cognitive-type"
                           label="Cognitive Type"
-                          tooltip="Analytical=data/logic; Creative=ideas/design; Procedural=process/systems"
+                          definition="The dominant mode of problem-solving required. Analytical=data/logic; Creative=ideas/design; Procedural=process/systems"
                         />
                         <Select
                           value={roleDefinition.cognitive_type || undefined}
@@ -526,7 +550,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="team-topology"
                           label="Team Topology"
-                          tooltip="Solo=independent focus; Cross-functional=team collaboration"
+                          definition="The typical team structure or collaboration style. Solo=independent focus; Cross-functional=team collaboration"
                         />
                         <Select
                           value={roleDefinition.team_topology || undefined}
@@ -549,7 +573,8 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="cultural-tone"
                           label="Cultural Tone"
-                          tooltip={"e.g., \"Fast-paced, Agile,\" \"Formal, Regulated,\" \"Collaborative, Research-driven\""}
+                          definition="Adjectives describing the work environment and interaction style."
+                          examples="Fast-paced, Agile, Formal, Regulated, Collaborative, Research-driven"
                         />
                         <Textarea
                           id="cultural-tone"
@@ -575,7 +600,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="role-family"
                           label="Role Family"
-                          tooltip="Helps tailor task relevance."
+                          definition="Helps tailor task relevance."
                         />
                         <Select
                           value={contextFlags.role_family || undefined}
@@ -598,7 +623,7 @@ const ConfirmRoleSummary = () => {
                         <FieldLabel
                           htmlFor="seniority"
                           label="Seniority"
-                          tooltip="Affects task complexity & dimensions like 'Judgment'."
+                          definition="Affects task complexity & dimensions like 'Judgment'."
                         />
                         <Select
                           value={contextFlags.seniority || undefined}
