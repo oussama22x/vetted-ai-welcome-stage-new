@@ -145,7 +145,7 @@ const GenerateAudition = () => {
           {
             project_id: projectId,
             definition_data: definitionPayload,
-          },
+          } as any,
           { onConflict: "project_id" },
         )
         .select("id")
@@ -170,7 +170,7 @@ const GenerateAudition = () => {
             scaffold_data: scaffold.scaffold_data,
             scaffold_preview_html: scaffold.scaffold_preview_html,
             definition_snapshot: definitionPayload,
-          },
+          } as any,
           { onConflict: "role_definition_id" },
         );
 
