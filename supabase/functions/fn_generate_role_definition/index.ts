@@ -318,7 +318,9 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("🔐 Authenticating request...");
     await ensureAuthenticatedUser(authHeader);
+    console.log("✅ Authentication successful");
 
     let body: RoleDefinitionPayload;
     try {
