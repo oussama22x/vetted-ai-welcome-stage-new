@@ -31,7 +31,6 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         role_title,
         status,
         created_at,
-        shareable_link_id,
         job_summary,
         candidate_source,
         tier_name,
@@ -123,7 +122,7 @@ const ProjectDetailPage = () => {
           <div className="space-y-4">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Your Audition is ready to be shared with candidates. <span className="font-medium text-foreground">(Shareable link coming soon.)</span>
+                Your Audition is ready to be shared with candidates. <span className="font-medium text-foreground">(Shareable link coming soon)</span>
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
