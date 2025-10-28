@@ -172,6 +172,19 @@ const ConfirmRoleSummary = () => {
         throw new Error("Job description missing. Please return to the previous step.");
       }
 
+      console.log("Checking user session before invoking function...");
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error("Session check failed or session is null:", sessionError);
+        throw new Error("Your session seems to have expired. Please refresh the page and log in again if needed.");
+      }
+
+      console.log("Session valid, proceeding to invoke function.");
+
       const { data: definitionRaw, error: definitionError } = await supabase.functions.invoke(
         "fn_generate_role_definition",
         {
@@ -180,8 +193,23 @@ const ConfirmRoleSummary = () => {
       );
 
       if (definitionError) {
-        console.error("Role definition generation failed", definitionError);
-        throw new Error(definitionError.message || "We couldn't generate the role definition. Please try again.");
+        console.error("Role definition generation failed", {
+          message: definitionError.message,
+          status: (definitionError as any).status,
+          name: (definitionError as any).name,
+          context: definitionError.context,
+          fullError: definitionError,
+        });
+
+        if ((definitionError as any).status === 401) {
+          throw new Error("Your session seems to have expired. Please refresh the page and log in again if needed.");
+        }
+
+        if ((definitionError as any).status === 429) {
+          throw new Error("We're experiencing high traffic. Please wait a moment and try again.");
+        }
+
+        throw new Error("We couldn't process the Job Description. Please check the text or try again.");
       }
 
       const parsed = parseEdgeResponse<RoleDefinitionResponse>(
