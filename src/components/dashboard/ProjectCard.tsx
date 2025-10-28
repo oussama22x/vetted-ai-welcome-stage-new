@@ -23,11 +23,11 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
 
   return (
     <Link to={`/workspace/project/${project.id}`} className="block">
-      <Card className="h-full border border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:border-border hover:shadow-lg">
-        <CardHeader className="pb-0">
+      <Card className="group h-full border border-border/70 shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:scale-[1.01] hover:border-border hover:shadow-md">
+        <CardHeader className="flex flex-col gap-4 p-6 pb-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-semibold text-foreground leading-tight line-clamp-2">
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold leading-tight text-foreground sm:text-2xl line-clamp-2">
                 {project.role_title}
               </h3>
               <p
@@ -39,14 +39,14 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                 {companyDisplay}
               </p>
             </div>
-            <Badge variant="secondary" className="whitespace-nowrap">
+            <Badge variant="secondary" className="whitespace-nowrap self-start">
               {statusLabel}
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="pt-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
+        <CardContent className="border-t border-border/60 p-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>Created on {format(new Date(project.created_at), "MMM d, yyyy")}</span>
           </div>
