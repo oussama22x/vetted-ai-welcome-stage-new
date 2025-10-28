@@ -1,5 +1,4 @@
 CREATE OR REPLACE FUNCTION public.create_draft_project_v3(
-  p_role_title TEXT,
   p_job_description TEXT
 )
 RETURNS uuid
@@ -44,7 +43,7 @@ BEGIN
   )
   VALUES (
     v_recruiter_id,
-    COALESCE(NULLIF(btrim(p_role_title), ''), 'Draft Role'),
+    'Draft Role',
     p_job_description,
     0,
     'Custom Proof',
@@ -94,4 +93,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.create_draft_project_v3(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_draft_project_v3(TEXT) TO authenticated;
