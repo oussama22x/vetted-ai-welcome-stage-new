@@ -29,7 +29,6 @@ BEGIN
   INSERT INTO public.projects (
     recruiter_id,
     role_title,
-    job_description,
     job_summary,
     tier_id,
     tier_name,
@@ -46,7 +45,6 @@ BEGIN
     v_recruiter_id,
     'Draft Role',
     p_job_description,
-    NULL,
     0,
     'Custom Proof',
     0,
