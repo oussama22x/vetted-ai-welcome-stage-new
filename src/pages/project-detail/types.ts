@@ -24,4 +24,7 @@ export interface ProjectDetail {
       } | null;
     } | null;
   } | null;
+  recruiters: {
+    company_name: string | null;
+  } | null;
 }

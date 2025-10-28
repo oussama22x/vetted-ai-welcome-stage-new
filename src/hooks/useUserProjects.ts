@@ -10,6 +10,7 @@ type NormalizableProject = Pick<RawProject, 'id' | 'role_title' | 'status' | 'pa
   candidate_count?: number | null;
   created_at?: string | null;
   tier_name?: string | null;
+  company_name?: string | null;
 };
 
 export interface Project {
@@ -20,6 +21,7 @@ export interface Project {
   candidate_count: number;
   created_at: string;
   tier_name?: string | null;
+  company_name?: string | null;
 }
 
 export const userProjectsQueryKey = (userId?: string) => ['user-projects', userId] as const;
@@ -32,6 +34,7 @@ export const normalizeProject = (project: NormalizableProject): Project => ({
   candidate_count: project.candidate_count ?? 0,
   created_at: project.created_at ?? new Date().toISOString(),
   tier_name: project.tier_name ?? null,
+  company_name: project.company_name ?? null,
 });
 
 export const useUserProjects = () => {
