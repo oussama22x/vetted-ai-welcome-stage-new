@@ -19,7 +19,10 @@ export interface ProjectDetail {
     audition_scaffolds: Array<{
       id: string;
       scaffold_preview_html: string | null;
-      dimension_justification?: string | null;
+      scaffold_data: {
+        dimension_justification?: string | null;
+        [key: string]: unknown;
+      } | null;
     }> | null;
   }> | null;
 }
