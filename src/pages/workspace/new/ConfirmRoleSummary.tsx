@@ -256,6 +256,7 @@ const ConfirmRoleSummary = () => {
         {
           p_job_description: jdContent,
           p_role_title: wizardState.roleTitle,
+          p_company_name: wizardState.companyName,
         },
       );
 
