@@ -3,7 +3,6 @@ export interface ProjectDetail {
   role_title: string;
   status: string | null;
   created_at: string | null;
-  shareable_link_id: string | null;
   job_summary: string | null;
   candidate_source: string | null;
   tier_name: string | null;
@@ -13,16 +12,16 @@ export interface ProjectDetail {
   candidates_completed: number | null;
   total_candidates: number | null;
   completion_percentage: number | null;
-  role_definitions: Array<{
+  role_definitions: {
     id: string;
     definition_data: unknown;
-    audition_scaffolds: Array<{
+    audition_scaffolds: {
       id: string;
       scaffold_preview_html: string | null;
       scaffold_data: {
         dimension_justification?: string | null;
         [key: string]: unknown;
       } | null;
-    }> | null;
-  }> | null;
+    } | null;
+  } | null;
 }

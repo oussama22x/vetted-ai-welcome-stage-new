@@ -32,7 +32,6 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         role_title,
         status,
         created_at,
-        shareable_link_id,
         job_summary,
         candidate_source,
         tier_name,
@@ -91,57 +90,17 @@ const ProjectDetailPage = () => {
     retry: 1,
   });
 
-  const roleDefinition = project?.role_definitions?.[0] ?? null;
-  const auditionScaffold = roleDefinition?.audition_scaffolds?.[0] ?? null;
-
-  const shareableLink = useMemo(() => {
-    if (!project?.shareable_link_id) return null;
-    if (typeof window === "undefined") {
-      return `/audition/${project.shareable_link_id}`;
-    }
-    return `${window.location.origin}/audition/${project.shareable_link_id}`;
-  }, [project?.shareable_link_id]);
-
-  const handleCopyLink = async () => {
-    if (!shareableLink) return;
-
-    try {
-      await navigator.clipboard.writeText(shareableLink);
-      toast({
-        title: "Link copied",
-        description: "The audition link has been copied to your clipboard.",
-      });
-    } catch (copyError) {
-      toast({
-        title: "Unable to copy link",
-        description: "Please copy the link manually.",
-        variant: "destructive",
-      });
-    }
-  };
+  const roleDefinition = project?.role_definitions ?? null;
+  const auditionScaffold = roleDefinition?.audition_scaffolds ?? null;
 
   const renderCandidateStatus = () => {
     switch (project?.status) {
       case "awaiting":
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Your Audition is ready to be shared. Use the link below to invite your candidates.
+              Your Audition is ready to be shared with candidates.
             </p>
-            {shareableLink ? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex-1 rounded-md border border-dashed border-muted px-4 py-3 text-sm font-medium">
-                  {shareableLink}
-                </div>
-                <Button variant="secondary" onClick={handleCopyLink} className="sm:w-auto">
-                  Copy Link
-                </Button>
-              </div>
-            ) : (
-              <p className="rounded-md border border-dashed border-muted px-4 py-3 text-sm text-muted-foreground">
-                A shareable link will appear here once this project is ready to distribute.
-              </p>
-            )}
             <p className="text-xs text-muted-foreground">
               Candidate status tracking will appear here once invitations are sent.
             </p>
