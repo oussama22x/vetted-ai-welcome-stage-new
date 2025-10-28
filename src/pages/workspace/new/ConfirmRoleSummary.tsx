@@ -255,6 +255,7 @@ const ConfirmRoleSummary = () => {
         "create_draft_project_v3",
         {
           p_job_description: jdContent,
+          p_role_title: wizardState.roleTitle,
         },
       );
 
