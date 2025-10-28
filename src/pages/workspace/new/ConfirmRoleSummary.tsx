@@ -23,7 +23,6 @@ import {
   type FinalRoleDefinitionState,
   type RoleContextFlags,
   type RoleDefinitionDetails,
-  type TierInfo,
 } from "@/hooks/useProjectWizard";
 
 type RoleDefinitionData = RoleDefinitionDetails;
@@ -64,15 +63,6 @@ const DEFAULT_CONTEXT_FLAGS: ContextFlags = {
   seniority: "Not specified",
   is_startup_context: false,
   is_people_management: false,
-};
-
-const FALLBACK_TIER: TierInfo = {
-  id: 0,
-  name: "Custom Proof",
-  description: "Default tier for audition setup",
-  anchorPrice: 0,
-  pilotPrice: 0,
-  features: [],
 };
 
 const COGNITIVE_TYPE_OPTIONS = ["Analytical", "Creative", "Procedural", "Not specified"];
@@ -247,9 +237,9 @@ const ConfirmRoleSummary = () => {
 
   const confirmMutation = useMutation<ConfirmMutationResult, Error, ConfirmPayload>({
     mutationFn: async payload => {
-      const jobDescription = wizardState.jdContent ?? wizardState.jobDescription;
+      const jdContent = wizardState.jdContent ?? wizardState.jobDescription;
 
-      if (!jobDescription) {
+      if (!jdContent) {
         throw new Error(
           "Missing job description. Please return to the previous step and upload it again.",
         );
@@ -261,38 +251,21 @@ const ConfirmRoleSummary = () => {
         clarifierResponses: payload.clarifierResponses,
       };
 
-      const roleTitle = wizardState.roleTitle?.trim() || "Pending Role Title";
-      const jobSummary = wizardState.jobSummary?.trim() || "";
-      const candidateSource = wizardState.candidateSource || "network";
-      const uploadedResumeCount = wizardState.uploadedResumes?.length ?? 0;
-      const candidateCount =
-        candidateSource === "own"
-          ? wizardState.candidateCount ?? uploadedResumeCount
-          : wizardState.candidateCount ?? 0;
+      const { data: projectId, error: createError } = await supabase.rpc(
+        "create_draft_project_v3",
+        {
+          p_job_description: jdContent,
+        },
+      );
 
-      const tier = wizardState.selectedTier ?? FALLBACK_TIER;
-
-      const { data: projectId, error: projectError } = await supabase
-        .rpc("create_project_for_current_user", {
-          p_role_title: roleTitle,
-          p_job_description: jobDescription,
-          p_job_summary: jobSummary,
-          p_tier_id: tier.id,
-          p_tier_name: tier.name,
-          p_anchor_price: tier.anchorPrice ?? 0,
-          p_pilot_price: tier.pilotPrice ?? 0,
-          p_candidate_source: candidateSource,
-          p_candidate_count: candidateCount,
-        });
-
-      if (projectError) {
-        console.error("Failed to create project", projectError);
+      if (createError) {
+        console.error("Failed to create project", createError);
         throw new Error(
-          projectError.message || "We couldn't create your project. Please try again.",
+          createError.message || "We couldn't create your project. Please try again.",
         );
       }
 
-      const project_id = typeof projectId === "string" ? projectId : null;
+      const project_id = typeof projectId === "string" && projectId.trim().length > 0 ? projectId : null;
 
       if (!project_id) {
         throw new Error("We couldn't create your project. Please try again.");
