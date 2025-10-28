@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -31,6 +31,7 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         role_title,
         status,
         created_at,
+        shareable_link_id,
         job_summary,
         candidate_source,
         tier_name,

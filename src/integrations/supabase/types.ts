@@ -218,6 +218,7 @@ export type Database = {
           candidate_count: number | null
           candidate_source: string | null
           candidates_completed: number | null
+          company_name: string | null
           completed_at: string | null
           completion_percentage: number | null
           created_at: string | null
@@ -239,6 +240,7 @@ export type Database = {
           candidate_count?: number | null
           candidate_source?: string | null
           candidates_completed?: number | null
+          company_name?: string | null
           completed_at?: string | null
           completion_percentage?: number | null
           created_at?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           candidate_count?: number | null
           candidate_source?: string | null
           candidates_completed?: number | null
+          company_name?: string | null
           completed_at?: string | null
           completion_percentage?: number | null
           created_at?: string | null
@@ -431,6 +434,14 @@ export type Database = {
             Args: { p_job_description: string; p_role_title?: string }
             Returns: string
           }
+        | {
+            Args: {
+              p_company_name?: string
+              p_job_description: string
+              p_role_title?: string
+            }
+            Returns: string
+          }
         | { Args: { p_job_description: string }; Returns: string }
       create_project_for_current_user: {
         Args: {
@@ -447,6 +458,7 @@ export type Database = {
         Args: never
         Returns: {
           candidate_count: number
+          company_name: string
           created_at: string
           id: string
           payment_status: string
