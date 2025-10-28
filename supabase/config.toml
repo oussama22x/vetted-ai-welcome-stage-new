@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.secure-shortlist-upload]
 verify_jwt = true
+
+[functions.fn_notify_sourcing_request]
+verify_jwt = false

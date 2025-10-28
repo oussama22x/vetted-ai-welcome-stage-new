@@ -55,7 +55,7 @@ serve(async (req) => {
     console.error("Error in fn_notify_sourcing_request:", error);
 
     return new Response(
-      JSON.stringify({ error: error.message || "Internal Server Error" }), {
+      JSON.stringify({ error: (error as Error).message || "Internal Server Error" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

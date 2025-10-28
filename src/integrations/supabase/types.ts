@@ -137,6 +137,47 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          notification_type: string
+          project_id: string | null
+          request_id: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          project_id?: string | null
+          request_id?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          project_id?: string | null
+          request_id?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
