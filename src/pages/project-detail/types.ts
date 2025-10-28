@@ -3,6 +3,7 @@ export interface ProjectDetail {
   role_title: string;
   status: string | null;
   created_at: string | null;
+  shareable_link_id: string | null;
   job_summary: string | null;
   candidate_source: string | null;
   tier_name: string | null;
@@ -23,5 +24,8 @@ export interface ProjectDetail {
         [key: string]: unknown;
       } | null;
     } | null;
+  } | null;
+  recruiters: {
+    company_name: string | null;
   } | null;
 }
