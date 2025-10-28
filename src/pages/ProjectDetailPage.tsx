@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProjectLayout } from "@/components/project/ProjectLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 import type { ProjectDetail } from "./project-detail/types";
 
@@ -74,7 +73,6 @@ const getStatusLabel = (status: string | null | undefined) => {
 const ProjectDetailPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const {
     data: project,
@@ -111,46 +109,13 @@ const ProjectDetailPage = () => {
     const fallback = String(justification).trim();
     return fallback.length ? fallback : null;
   }, [auditionScaffold?.scaffold_data?.dimension_justification]);
-  const companyName = project?.recruiters?.company_name?.trim() || null;
-  const shareableLink = useMemo(() => {
-    if (!project?.shareable_link_id) {
-      return null;
-    }
+  const companyName = useMemo(() => {
+    const raw = project?.recruiters?.company_name ?? "";
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }, [project?.recruiters?.company_name]);
 
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/auditions/${project.shareable_link_id}`;
-  }, [project?.shareable_link_id]);
-
-  const handleCopyLink = useCallback(async () => {
-    if (!shareableLink) {
-      return;
-    }
-
-    if (!navigator?.clipboard) {
-      toast({
-        title: "Clipboard unavailable",
-        description: "Please copy the audition link manually.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareableLink);
-      toast({
-        title: "Link copied",
-        description: "The audition link has been copied to your clipboard.",
-      });
-    } catch (copyError) {
-      toast({
-        title: "Unable to copy link",
-        description: "Please try again or copy the link manually.",
-        variant: "destructive",
-      });
-      console.error(copyError);
-    }
-  }, [shareableLink, toast]);
-
+  const companyDisplay = companyName ?? "Company TBD";
   const renderCandidateStatus = () => {
     switch (project?.status) {
       case "awaiting":
@@ -158,29 +123,8 @@ const ProjectDetailPage = () => {
           <div className="space-y-4">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Your Audition is ready to be shared with candidates.
+                Your Audition is ready to be shared with candidates. <span className="font-medium text-foreground">(Shareable link coming soon.)</span>
               </p>
-              {shareableLink ? (
-                <div className="space-y-2 rounded-lg border border-muted px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Shareable Link
-                      </p>
-                      <p className="break-all text-sm font-medium text-foreground">
-                        {shareableLink}
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={handleCopyLink}>
-                      Copy Link
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  A shareable link will appear here once this Audition is ready to send.
-                </p>
-              )}
             </div>
             <p className="text-xs text-muted-foreground">
               Candidate status tracking will appear here once invitations are sent.
@@ -275,7 +219,9 @@ const ProjectDetailPage = () => {
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
               <div className="space-y-1 text-sm text-muted-foreground">
-                <p>{companyName ?? "Company TBD"}</p>
+                <p className={companyName ? "font-medium" : "italic"}>
+                  {companyDisplay}
+                </p>
                 {project.created_at && (
                   <p>Created on {format(new Date(project.created_at), "MMM d, yyyy")}</p>
                 )}
