@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,18 +178,26 @@ const ProjectDetailPage = () => {
       <TooltipProvider>
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
           <header className="flex flex-col gap-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
-                {project.created_at && (
-                  <p className="text-sm text-muted-foreground">
-                    Created on {format(new Date(project.created_at), "MMM d, yyyy")}
-                  </p>
-                )}
-              </div>
-              <Badge variant="secondary" className="self-start text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                className="w-fit gap-2"
+                onClick={() => navigate("/workspace")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to All Projects
+              </Button>
+              <Badge variant="secondary" className="text-sm">
                 {statusLabel}
               </Badge>
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
+              {project.created_at && (
+                <p className="text-sm text-muted-foreground">
+                  Created on {format(new Date(project.created_at), "MMM d, yyyy")}
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>Audition Hub</span>

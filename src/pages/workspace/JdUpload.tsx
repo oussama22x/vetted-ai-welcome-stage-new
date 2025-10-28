@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,14 @@ import { useProjectWizard } from "@/hooks/useProjectWizard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import type { TextItem } from "pdfjs-dist/types/src/display/api";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.js?url";
+import * as mammoth from "mammoth";
+
+if (typeof window !== "undefined") {
+  GlobalWorkerOptions.workerSrc = workerSrc;
+}
 
 const MAX_CHAR_COUNT = 10_000;
 const CHAR_LIMIT_MESSAGE =
@@ -37,6 +45,10 @@ export default function JdUpload() {
   const [jd, setJd] = useState(wizardState.jdContent || wizardState.jobDescription || "");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [parsingFileName, setParsingFileName] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const characterCount = jd.length;
   const isOverCharLimit = characterCount > MAX_CHAR_COUNT;
@@ -54,16 +66,104 @@ export default function JdUpload() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const fileParsingErrorMessage =
+    "Could not read text from the uploaded file. Please try a different file or paste the text.";
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      handleJdChange(text);
-    };
-    reader.readAsText(file);
+  const readFileAsText = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file as text"));
+      reader.onload = () => resolve((reader.result as string) ?? "");
+      reader.readAsText(file);
+    });
+
+  const readFileAsArrayBuffer = (file: File) =>
+    new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file as array buffer"));
+      reader.onload = () => {
+        const result = reader.result;
+        if (result instanceof ArrayBuffer) {
+          resolve(result);
+        } else {
+          reject(new Error("Invalid array buffer result"));
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+  const extractTextFromPdf = async (file: File) => {
+    const arrayBuffer = await readFileAsArrayBuffer(file);
+    const pdf = await getDocument({ data: arrayBuffer }).promise;
+    const textChunks: string[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item) => ("str" in item ? (item as TextItem).str : ""))
+        .join(" ");
+      textChunks.push(pageText);
+    }
+
+    return textChunks.join("\n\n");
+  };
+
+  const extractTextFromDocx = async (file: File) => {
+    const arrayBuffer = await readFileAsArrayBuffer(file);
+    const { value } = await mammoth.extractRawText({ arrayBuffer });
+    return value ?? "";
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setParsingFileName(file.name);
+    setIsParsingFile(true);
+    setUploadedFileName(null);
+    setErrorMessage(null);
+
+    try {
+      const fileName = file.name.toLowerCase();
+      const extension = fileName.split(".").pop() ?? "";
+      let extractedText = "";
+
+      if (extension === "txt") {
+        extractedText = await readFileAsText(file);
+      } else if (extension === "pdf") {
+        extractedText = await extractTextFromPdf(file);
+      } else if (extension === "docx") {
+        extractedText = await extractTextFromDocx(file);
+      } else {
+        throw new Error("Unsupported file type");
+      }
+
+      const normalizedText = extractedText.replace(/\r\n/g, "\n");
+
+      if (!normalizedText.trim()) {
+        throw new Error("No text extracted");
+      }
+
+      handleJdChange(normalizedText);
+      setUploadedFileName(file.name);
+    } catch (error) {
+      console.error("Failed to read uploaded file:", error);
+      setUploadedFileName(null);
+      setErrorMessage(fileParsingErrorMessage);
+      toast({
+        title: "File upload failed",
+        description: fileParsingErrorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingFile(false);
+      setParsingFileName(null);
+      const input = event.target;
+      input.value = "";
+    }
   };
 
   const handleContinue = async () => {
@@ -239,27 +339,44 @@ export default function JdUpload() {
               <div className="flex-1 h-px bg-border" />
             </div>
 
-            <label htmlFor="file-upload">
-              <Button variant="outline" className="w-full" asChild>
-                <div className="cursor-pointer">
+            <input
+              ref={fileInputRef}
+              id="file-upload"
+              type="file"
+              accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isParsingFile}
+            >
+              {isParsingFile ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {parsingFileName ? `Reading ${parsingFileName}...` : "Reading file..."}
+                </>
+              ) : (
+                <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload File (PDF, DOCX, TXT)
-                </div>
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".pdf,.docx,.txt"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
+                  Upload File (PDF, DOCX, or TXT)
+                </>
+              )}
+            </Button>
+            {uploadedFileName && (
+              <div className="text-sm text-muted-foreground" aria-live="polite">
+                Uploaded file: {uploadedFileName}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">
             <Button
               onClick={handleContinue}
-              disabled={jd.length < 50 || isOverCharLimit || isLoading}
+              disabled={jd.length < 50 || isOverCharLimit || isLoading || isParsingFile}
               size="lg"
             >
               {isLoading ? (
