@@ -182,6 +182,7 @@ export type Database = {
           created_at: string | null
           hours_elapsed: number | null
           id: string
+          job_description: string | null
           job_summary: string | null
           payment_status: string | null
           recruiter_id: string
@@ -202,6 +203,7 @@ export type Database = {
           created_at?: string | null
           hours_elapsed?: number | null
           id?: string
+          job_description?: string | null
           job_summary?: string | null
           payment_status?: string | null
           recruiter_id: string
@@ -222,6 +224,7 @@ export type Database = {
           created_at?: string | null
           hours_elapsed?: number | null
           id?: string
+          job_description?: string | null
           job_summary?: string | null
           payment_status?: string | null
           recruiter_id?: string
@@ -381,6 +384,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_abandoned_drafts: { Args: never; Returns: undefined }
       create_draft_project_v3: {
         Args: { p_job_description: string }
         Returns: string
@@ -416,7 +420,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_admin:
+        | { Args: { user_id: string }; Returns: boolean }
+        | { Args: never; Returns: boolean }
       is_email_whitelisted: { Args: { email: string }; Returns: boolean }
       mark_project_awaiting_setup_call: {
         Args: { p_project_id: string }

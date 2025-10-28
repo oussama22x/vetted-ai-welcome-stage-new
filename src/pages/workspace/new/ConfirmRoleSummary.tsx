@@ -271,17 +271,18 @@ const ConfirmRoleSummary = () => {
         throw new Error("We couldn't create your project. Please try again.");
       }
 
-      const { error: roleDefinitionError } = await supabase.from("role_definitions").insert({
-        project_id,
-        definition_data: finalRoleDefinition,
-      } as any);
+      const { data: roleDefData, error: roleDefinitionError } = await supabase
+        .from("role_definitions")
+        .insert({
+          project_id,
+          definition_data: finalRoleDefinition,
+        } as any)
+        .select('id')
+        .single();
 
       if (roleDefinitionError) {
         console.error("Failed to save role definition", roleDefinitionError);
-        throw new Error(
-          roleDefinitionError.message ||
-            "We couldn't save your role definition. Please try again.",
-        );
+        throw new Error("Failed to save role definition. Please try again.");
       }
 
       return { project_id, finalRoleDefinition };
