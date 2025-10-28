@@ -386,7 +386,7 @@ export type Database = {
     Functions: {
       cleanup_abandoned_drafts: { Args: never; Returns: undefined }
       create_draft_project_v3: {
-        Args: { p_job_description: string }
+        Args: { p_role_title: string | null; p_job_description: string }
         Returns: string
       }
       create_project_for_current_user: {

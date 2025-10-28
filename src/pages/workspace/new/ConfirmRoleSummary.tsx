@@ -238,6 +238,7 @@ const ConfirmRoleSummary = () => {
   const confirmMutation = useMutation<ConfirmMutationResult, Error, ConfirmPayload>({
     mutationFn: async payload => {
       const jdContent = wizardState.jdContent ?? wizardState.jobDescription;
+      const roleTitle = wizardState.roleTitle?.trim();
 
       if (!jdContent) {
         throw new Error(
@@ -254,6 +255,7 @@ const ConfirmRoleSummary = () => {
       const { data: projectId, error: createError } = await supabase.rpc(
         "create_draft_project_v3",
         {
+          p_role_title: roleTitle ?? null,
           p_job_description: jdContent,
         },
       );
