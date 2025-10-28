@@ -48,7 +48,7 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
           audition_scaffolds (
             id,
             scaffold_preview_html,
-            dimension_justification
+            scaffold_data
           )
         )
       `
@@ -265,7 +265,8 @@ const ProjectDetailPage = () => {
                 <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
                   <h3 className="text-sm font-medium text-foreground">Rationale:</h3>
                   <p className="text-sm text-muted-foreground">
-                    {auditionScaffold?.dimension_justification ?? "Context for this audition's dimensions will appear here."}
+                    {auditionScaffold?.scaffold_data?.dimension_justification ??
+                      "Context for this audition's dimensions will appear here."}
                   </p>
                 </div>
               </CardContent>
