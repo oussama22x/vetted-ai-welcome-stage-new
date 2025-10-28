@@ -12,6 +12,7 @@ export interface ProjectDetail {
   candidates_completed: number | null;
   total_candidates: number | null;
   completion_percentage: number | null;
+  company_name: string | null;
   role_definitions: {
     id: string;
     definition_data: unknown;

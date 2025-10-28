@@ -40,6 +40,7 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         candidates_completed,
         total_candidates,
         completion_percentage,
+        company_name,
         recruiters (
           company_name
         ),
@@ -109,10 +110,10 @@ const ProjectDetailPage = () => {
     return fallback.length ? fallback : null;
   }, [auditionScaffold?.scaffold_data?.dimension_justification]);
   const companyName = useMemo(() => {
-    const raw = project?.recruiters?.company_name ?? "";
+    const raw = project?.company_name ?? "";
     const trimmed = raw.trim();
     return trimmed.length ? trimmed : null;
-  }, [project?.recruiters?.company_name]);
+  }, [project?.company_name]);
 
   const companyDisplay = companyName ?? "Company TBD";
   const renderCandidateStatus = () => {
