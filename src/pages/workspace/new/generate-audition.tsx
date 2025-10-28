@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Target } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useProjectWizard, type WizardState } from "@/hooks/useProjectWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,16 +38,15 @@ interface WizardStateWithFinal extends WizardState {
   finalRoleDefinition?: FinalRoleDefinition;
 }
 
-interface Dimension {
-  title: string;
-  description: string;
-  rationale?: string;
-}
-
 interface AuditionScaffoldResponse {
   scaffold_data?: {
-    dimensions?: Dimension[];
-    justification?: string;
+    objective?: string;
+    context_frame?: string;
+    inputs?: string[];
+    constraint_dials?: Record<string, number>;
+    chosen_dimensions?: string[];
+    dimension_justification?: string;
+    mechanics?: string[];
   };
   scaffold_preview_html?: string;
 }
@@ -237,54 +236,25 @@ const GenerateAudition = () => {
       return null;
     }
 
-    const dimensions = scaffold.scaffold_data?.dimensions || [];
-
     return (
       <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Evaluation Dimensions</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Audition Structure</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="prose max-w-none text-sm leading-relaxed dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: scaffold.scaffold_preview_html ?? "" }}
+            />
+          </CardContent>
+        </Card>
+
+        {scaffold.scaffold_data?.dimension_justification && (
           <p className="text-sm text-muted-foreground">
-            We've designed {dimensions.length} dimension{dimensions.length !== 1 ? 's' : ''} to assess candidates effectively.
+            <span className="font-semibold text-foreground">Rationale:</span>{" "}
+            {scaffold.scaffold_data.dimension_justification}
           </p>
-        </div>
-
-        <div className="grid gap-4">
-          {dimensions.map((dimension: Dimension, index: number) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Target className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <CardTitle className="text-lg">{dimension.title}</CardTitle>
-                    <CardDescription>{dimension.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              {dimension.rationale && (
-                <CardContent>
-                  <div className="rounded-lg bg-muted/50 p-4">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Why this matters: </span>
-                      {dimension.rationale}
-                    </p>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-
-        {scaffold.scaffold_data?.justification && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-base">Selection Rationale</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{scaffold.scaffold_data.justification}</p>
-            </CardContent>
-          </Card>
         )}
 
         <div className="flex justify-end">
