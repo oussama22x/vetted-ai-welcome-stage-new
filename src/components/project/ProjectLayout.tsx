@@ -29,7 +29,7 @@ export const ProjectLayout = ({ children }: ProjectLayoutProps) => {
             />
             <div>
               <h1 className="text-xl font-bold">VettedAI</h1>
-              <p className="text-xs text-muted-foreground">Validation Build</p>
+              <p className="text-xs text-muted-foreground">Recruiter Workspace</p>
             </div>
           </div>
           
