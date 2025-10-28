@@ -447,6 +447,7 @@ export type Database = {
         Args: never
         Returns: {
           candidate_count: number
+          company_name: string
           created_at: string
           id: string
           payment_status: string
