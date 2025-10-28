@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -32,6 +32,7 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         role_title,
         status,
         created_at,
+        shareable_link_id,
         job_summary,
         candidate_source,
         tier_name,
@@ -41,6 +42,9 @@ const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
         candidates_completed,
         total_candidates,
         completion_percentage,
+        recruiters (
+          company_name
+        ),
         role_definitions (
           id,
           definition_data,
@@ -92,15 +96,92 @@ const ProjectDetailPage = () => {
 
   const roleDefinition = project?.role_definitions ?? null;
   const auditionScaffold = roleDefinition?.audition_scaffolds ?? null;
+  const dimensionJustification = useMemo(() => {
+    const justification = auditionScaffold?.scaffold_data?.dimension_justification;
+
+    if (typeof justification === "string") {
+      const trimmed = justification.trim();
+      return trimmed.length ? trimmed : null;
+    }
+
+    if (justification === null || justification === undefined) {
+      return null;
+    }
+
+    const fallback = String(justification).trim();
+    return fallback.length ? fallback : null;
+  }, [auditionScaffold?.scaffold_data?.dimension_justification]);
+  const companyName = project?.recruiters?.company_name?.trim() || null;
+  const shareableLink = useMemo(() => {
+    if (!project?.shareable_link_id) {
+      return null;
+    }
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/auditions/${project.shareable_link_id}`;
+  }, [project?.shareable_link_id]);
+
+  const handleCopyLink = useCallback(async () => {
+    if (!shareableLink) {
+      return;
+    }
+
+    if (!navigator?.clipboard) {
+      toast({
+        title: "Clipboard unavailable",
+        description: "Please copy the audition link manually.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      toast({
+        title: "Link copied",
+        description: "The audition link has been copied to your clipboard.",
+      });
+    } catch (copyError) {
+      toast({
+        title: "Unable to copy link",
+        description: "Please try again or copy the link manually.",
+        variant: "destructive",
+      });
+      console.error(copyError);
+    }
+  }, [shareableLink, toast]);
 
   const renderCandidateStatus = () => {
     switch (project?.status) {
       case "awaiting":
         return (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Your Audition is ready to be shared with candidates.
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Your Audition is ready to be shared with candidates.
+              </p>
+              {shareableLink ? (
+                <div className="space-y-2 rounded-lg border border-muted px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Shareable Link
+                      </p>
+                      <p className="break-all text-sm font-medium text-foreground">
+                        {shareableLink}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={handleCopyLink}>
+                      Copy Link
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  A shareable link will appear here once this Audition is ready to send.
+                </p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Candidate status tracking will appear here once invitations are sent.
             </p>
@@ -191,16 +272,14 @@ const ProjectDetailPage = () => {
                 {statusLabel}
               </Badge>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
-              {project.created_at && (
-                <p className="text-sm text-muted-foreground">
-                  Created on {format(new Date(project.created_at), "MMM d, yyyy")}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span>Audition Hub</span>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>{companyName ?? "Company TBD"}</p>
+                {project.created_at && (
+                  <p>Created on {format(new Date(project.created_at), "MMM d, yyyy")}</p>
+                )}
+              </div>
             </div>
           </header>
 
@@ -232,7 +311,7 @@ const ProjectDetailPage = () => {
                 <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
                   <h3 className="text-sm font-medium text-foreground">Rationale:</h3>
                   <p className="text-sm text-muted-foreground">
-                    {auditionScaffold?.scaffold_data?.dimension_justification ??
+                    {dimensionJustification ??
                       "Context for this audition's dimensions will appear here."}
                   </p>
                 </div>
