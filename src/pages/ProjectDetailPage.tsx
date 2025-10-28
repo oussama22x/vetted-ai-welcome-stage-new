@@ -1,58 +1,85 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Upload, ChevronDown } from "lucide-react";
+import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProjectLayout } from "@/components/project/ProjectLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProjectLayout } from "@/components/project/ProjectLayout";
-import { RoleSummaryCard } from "@/components/project/RoleSummaryCard";
-import { CandidateEngagementTracker } from "@/components/project/CandidateEngagementTracker";
-import { CandidateListTable } from "@/components/project/CandidateListTable";
-import { EmptyState } from "@/components/project/EmptyState";
-import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import ActivationInProgressView from "./project-detail/ActivationInProgressView";
-import PendingActivationView from "./project-detail/PendingActivationView";
 import type { ProjectDetail } from "./project-detail/types";
 
-const STATUS_PENDING_ACTIVATION = "pending_activation";
-const STATUS_ACTIVATION_IN_PROGRESS = "activation_in_progress";
+const statusLabels: Record<string, string> = {
+  awaiting: "Awaiting Candidates",
+  awaiting_network_match: "Sourcing via Network",
+  draft: "Draft",
+  inviting: "Inviting Candidates",
+  scoring: "Scoring in Progress",
+  ready: "Shortlist Ready",
+};
 
 const fetchProject = async (projectId: string): Promise<ProjectDetail> => {
   const { data, error } = await supabase
     .from("projects")
     .select(
-      "id, role_title, status, job_summary, candidate_source, tier_name, candidate_count, created_at, payment_status, hours_elapsed, candidates_completed, total_candidates, completion_percentage"
+      `
+        id,
+        role_title,
+        status,
+        created_at,
+        shareable_link_id,
+        job_summary,
+        candidate_source,
+        tier_name,
+        candidate_count,
+        payment_status,
+        hours_elapsed,
+        candidates_completed,
+        total_candidates,
+        completion_percentage,
+        role_definitions (
+          id,
+          definition_data,
+          audition_scaffolds (
+            id,
+            scaffold_preview_html,
+            dimension_justification
+          )
+        )
+      `
     )
     .eq("id", projectId)
-    .single<ProjectDetail>();
+    .single();
 
-  if (error) {
-    throw error;
+  if (error || !data) {
+    throw error ?? new Error("Unable to load project");
   }
 
-  return data;
+  return data as ProjectDetail;
+};
+
+const getStatusLabel = (status: string | null | undefined) => {
+  if (!status) return "In Progress";
+  return statusLabels[status] ?? "In Progress";
 };
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [candidateData, setCandidateData] = useState<any[]>([]);
-  const [showCandidateList, setShowCandidateList] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const {
     data: project,
     isLoading,
     isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["project", projectId],
+    error,
+  } = useQuery<ProjectDetail, Error>({
+    queryKey: ["project-detail", projectId],
     enabled: Boolean(projectId),
     queryFn: () => {
       if (!projectId) {
@@ -61,94 +88,106 @@ const ProjectDetailPage = () => {
 
       return fetchProject(projectId);
     },
+    retry: 1,
   });
 
-  useEffect(() => {
-    if (projectId && project && !['pending_activation', 'activation_in_progress'].includes(project.status)) {
-      fetchCandidates();
+  const roleDefinition = project?.role_definitions?.[0] ?? null;
+  const auditionScaffold = roleDefinition?.audition_scaffolds?.[0] ?? null;
+
+  const shareableLink = useMemo(() => {
+    if (!project?.shareable_link_id) return null;
+    if (typeof window === "undefined") {
+      return `/audition/${project.shareable_link_id}`;
     }
-  }, [projectId, project]);
+    return `${window.location.origin}/audition/${project.shareable_link_id}`;
+  }, [project?.shareable_link_id]);
 
-  useEffect(() => {
-    if (!projectId) return;
+  const handleCopyLink = async () => {
+    if (!shareableLink) return;
 
-    const channel = supabase
-      .channel('project_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'projects',
-          filter: `id=eq.${projectId}`
-        },
-        (payload) => {
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [projectId, refetch]);
-
-  const fetchCandidates = async () => {
-    if (!projectId) return;
-    
-    const { data, error } = await supabase
-      .from('talent_profiles')
-      .select('id, parsed_name, parsed_email, status')
-      .eq('project_id', projectId)
-      .order('uploaded_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching candidates:', error);
-      return;
-    }
-    
-    setCandidateData(data || []);
-  };
-
-  const handleAddCandidates = () => {
-    setShowUploadModal(true);
-  };
-
-  const handleSubmitCandidates = () => {
-    toast({
-      title: "Candidates uploaded",
-      description: "Your candidates have been added successfully."
-    });
-    setShowUploadModal(false);
-    fetchCandidates();
-  };
-
-  const handleConfirmActivation = async () => {
-    if (!projectId) return;
-
-    setIsUpdating(true);
-    const { error } = await supabase
-      .from("projects")
-      .update({ status: STATUS_ACTIVATION_IN_PROGRESS })
-      .eq("id", projectId);
-
-    if (error) {
+    try {
+      await navigator.clipboard.writeText(shareableLink);
       toast({
-        title: "Unable to update project",
-        description: error.message || "Please try again or contact support.",
+        title: "Link copied",
+        description: "The audition link has been copied to your clipboard.",
+      });
+    } catch (copyError) {
+      toast({
+        title: "Unable to copy link",
+        description: "Please copy the link manually.",
         variant: "destructive",
       });
-      setIsUpdating(false);
-      return;
     }
+  };
 
-    toast({
-      title: "Setup call confirmed",
-      description: "Thanks for confirming—your activation is underway.",
-    });
-
-    await refetch();
-    setIsUpdating(false);
+  const renderCandidateStatus = () => {
+    switch (project?.status) {
+      case "awaiting":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your Audition is ready to be shared. Use the link below to invite your candidates.
+            </p>
+            {shareableLink ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1 rounded-md border border-dashed border-muted px-4 py-3 text-sm font-medium">
+                  {shareableLink}
+                </div>
+                <Button variant="secondary" onClick={handleCopyLink} className="sm:w-auto">
+                  Copy Link
+                </Button>
+              </div>
+            ) : (
+              <p className="rounded-md border border-dashed border-muted px-4 py-3 text-sm text-muted-foreground">
+                A shareable link will appear here once this project is ready to distribute.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Candidate status tracking will appear here once invitations are sent.
+            </p>
+          </div>
+        );
+      case "awaiting_network_match":
+        return (
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              VettedAI is sourcing candidates based on this Audition. We'll update this space and notify you when your shortlist of
+              vetted candidates is ready.
+            </p>
+            <p>Shortlist details will appear here.</p>
+          </div>
+        );
+      case "draft":
+        return (
+          <p className="text-sm text-muted-foreground">
+            This Audition draft has not been approved yet. Please complete the generation process.
+          </p>
+        );
+      case "inviting":
+        return (
+          <p className="text-sm text-muted-foreground">
+            Candidate invitations are being sent. Tracking details will populate here shortly.
+          </p>
+        );
+      case "scoring":
+        return (
+          <p className="text-sm text-muted-foreground">
+            Candidates are completing the Audition. Scoring insights will appear here soon.
+          </p>
+        );
+      case "ready":
+        return (
+          <p className="text-sm text-muted-foreground">
+            Your shortlist is ready. Review details will be available in this section.
+          </p>
+        );
+      default:
+        return (
+          <p className="text-sm text-muted-foreground">
+            Updates about candidate progress for this Audition will appear here.
+          </p>
+        );
+    }
   };
 
   if (isLoading) {
@@ -164,148 +203,88 @@ const ProjectDetailPage = () => {
   if (isError || !project) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <h1 className="text-2xl font-semibold">We couldn't find that project</h1>
+        <h1 className="text-2xl font-semibold">We couldn't load this audition</h1>
         <p className="max-w-md text-muted-foreground">
-          The project you're looking for might have been removed or you may not have permission to view it.
+          {error?.message ?? "The project you're looking for might have been removed or you may not have permission to view it."}
         </p>
         <Button onClick={() => navigate("/workspace")}>Back to Workspace</Button>
       </div>
     );
   }
 
-  if (project.status === STATUS_PENDING_ACTIVATION) {
-    return (
-      <PendingActivationView
-        project={project}
-        onBack={() => navigate("/workspace")}
-        onConfirmActivation={handleConfirmActivation}
-        isConfirming={isUpdating}
-      />
-    );
-  }
+  const statusLabel = getStatusLabel(project.status);
 
-  if (project.status === STATUS_ACTIVATION_IN_PROGRESS) {
-    return <ActivationInProgressView project={project} onBack={() => navigate("/workspace")} />;
-  }
-
-  // For all other statuses, show the full project view
   return (
     <ProjectLayout>
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm mb-6">
-          <Button 
-            variant="link" 
-            onClick={() => navigate('/workspace')}
-            className="p-0 h-auto text-muted-foreground hover:text-foreground"
-          >
-            ← My Workspace
-          </Button>
-          <span className="text-muted-foreground">/</span>
-          <span className="font-medium">{project.role_title}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Panel - Role Summary & Engagement */}
-          <div className="lg:col-span-1 space-y-6">
-            <RoleSummaryCard
-              roleTitle={project.role_title}
-              tier={{ name: project.tier_name } as any}
-              candidateSource={project.candidate_source as 'own' | 'network'}
-              candidateCount={project.candidate_count || 0}
-              status={project.status as any}
-              progress={{
-                hoursElapsed: project.hours_elapsed || 0,
-                totalHours: 48,
-                percentage: Math.min(((project.hours_elapsed || 0) / 48) * 100, 100)
-              }}
-            />
-
-            <CandidateEngagementTracker
-              candidatesCompleted={project.candidates_completed || 0}
-              totalCandidates={project.total_candidates || 0}
-              completionPercentage={project.completion_percentage || 0}
-            />
-          </div>
-
-          {/* Right Panel - Candidates */}
-          <div className="lg:col-span-2">
-            <div className="bg-card border border-border rounded-xl shadow-md p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold">Candidates</h3>
-                {project.candidate_source === 'own' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleAddCandidates}
-                    disabled={(project.candidate_count || 0) >= 50}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Add More ({project.candidate_count || 0}/50)
-                  </Button>
+      <TooltipProvider>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
+          <header className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
+                {project.created_at && (
+                  <p className="text-sm text-muted-foreground">
+                    Created on {format(new Date(project.created_at), "MMM d, yyyy")}
+                  </p>
                 )}
               </div>
-
-              {candidateData.length > 0 && (
-                <div className="mb-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowCandidateList(!showCandidateList)}
-                    className="w-full mb-4"
-                  >
-                    {showCandidateList ? 'Hide' : 'View'} Candidate List
-                    <ChevronDown className={cn(
-                      "w-4 h-4 ml-2 transition-transform",
-                      showCandidateList && "rotate-180"
-                    )} />
-                  </Button>
-
-                  {showCandidateList && (
-                    <CandidateListTable candidates={candidateData} />
-                  )}
-                </div>
-              )}
-
-              {candidateData.length === 0 && <EmptyState />}
-
-              {project.status === 'ready' && (
-                <div className="mt-8 pt-6 border-t border-border">
-                  <Button size="lg" className="w-full">
-                    View Shortlist →
-                  </Button>
-                </div>
-              )}
+              <Badge variant="secondary" className="self-start text-sm">
+                {statusLabel}
+              </Badge>
             </div>
-          </div>
-        </div>
-      </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>Audition Hub</span>
+            </div>
+          </header>
 
-      {/* Upload Modal */}
-      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add More Candidates</DialogTitle>
-            <DialogDescription>
-              Upload additional candidates for this project. 
-              Current: {project.candidate_count || 0}/50
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-            <Upload className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>File upload functionality to be implemented</p>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitCandidates}>
-              Upload Candidates
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <section>
+            <Card>
+              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Approved Audition Outline</CardTitle>
+                  <CardDescription>
+                    The experience candidates will complete when participating in this Audition.
+                  </CardDescription>
+                </div>
+                <Button variant="link" className="px-0" disabled>
+                  View Role DNA
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {auditionScaffold?.scaffold_preview_html ? (
+                  <div
+                    className="prose max-w-none rounded-lg border bg-card/60 px-6 py-5 text-sm"
+                    dangerouslySetInnerHTML={{ __html: auditionScaffold.scaffold_preview_html }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    The audition outline will appear here once it has been approved.
+                  </p>
+                )}
+
+                <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
+                  <h3 className="text-sm font-medium text-foreground">Rationale:</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {auditionScaffold?.dimension_justification ?? "Context for this audition's dimensions will appear here."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Candidate Progress</CardTitle>
+                <CardDescription>
+                  Monitor how candidates are moving through this Audition.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>{renderCandidateStatus()}</CardContent>
+            </Card>
+          </section>
+        </div>
+      </TooltipProvider>
     </ProjectLayout>
   );
 };
