@@ -201,9 +201,9 @@ const ProjectDetailPage = () => {
   return (
     <ProjectLayout>
       <TooltipProvider>
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
-          <header className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-8">
+          <header className="flex flex-col gap-6">
+            <div className="flex items-center justify-between">
               <Button
                 variant="outline"
                 className="w-fit gap-2"
@@ -212,18 +212,22 @@ const ProjectDetailPage = () => {
                 <ArrowLeft className="h-4 w-4" />
                 Back to All Projects
               </Button>
-              <Badge variant="secondary" className="text-sm">
-                {statusLabel}
-              </Badge>
             </div>
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold text-foreground">{project.role_title}</h1>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p className={companyName ? "font-medium" : "italic"}>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  {project.role_title}
+                </h1>
+                <Badge variant="secondary" className="self-start text-sm sm:self-auto">
+                  {statusLabel}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                <span className={companyName ? "font-medium text-foreground" : "italic"}>
                   {companyDisplay}
-                </p>
+                </span>
                 {project.created_at && (
-                  <p>Created on {format(new Date(project.created_at), "MMM d, yyyy")}</p>
+                  <span>Created on {format(new Date(project.created_at), "MMM d, yyyy")}</span>
                 )}
               </div>
             </div>
@@ -231,14 +235,14 @@ const ProjectDetailPage = () => {
 
           <section>
             <Card>
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+              <CardHeader className="space-y-2 pb-4 sm:flex sm:items-start sm:justify-between sm:space-y-0">
+                <div className="space-y-1">
                   <CardTitle>Approved Audition Outline</CardTitle>
                   <CardDescription>
                     The experience candidates will complete when participating in this Audition.
                   </CardDescription>
                 </div>
-                <Button variant="link" className="px-0" disabled>
+                <Button variant="link" className="px-0 text-sm font-semibold" disabled>
                   View Role DNA
                 </Button>
               </CardHeader>
@@ -255,8 +259,8 @@ const ProjectDetailPage = () => {
                 )}
 
                 <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
-                  <h3 className="text-sm font-medium text-foreground">Rationale:</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rationale</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     {dimensionJustification ??
                       "Context for this audition's dimensions will appear here."}
                   </p>
@@ -267,13 +271,15 @@ const ProjectDetailPage = () => {
 
           <section>
             <Card>
-              <CardHeader>
+              <CardHeader className="space-y-2 pb-4">
                 <CardTitle>Candidate Progress</CardTitle>
                 <CardDescription>
                   Monitor how candidates are moving through this Audition.
                 </CardDescription>
               </CardHeader>
-              <CardContent>{renderCandidateStatus()}</CardContent>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                {renderCandidateStatus()}
+              </CardContent>
             </Card>
           </section>
         </div>
