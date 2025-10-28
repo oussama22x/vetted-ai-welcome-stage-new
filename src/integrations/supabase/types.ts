@@ -381,6 +381,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_draft_project_v3: {
+        Args: { p_job_description: string }
+        Returns: string
+      }
       create_project_for_current_user: {
         Args: {
           p_candidate_count: number
