@@ -64,6 +64,36 @@ export type Database = {
           },
         ]
       }
+      archetypes: {
+        Row: {
+          archetype_id: string
+          created_at: string | null
+          dimension: string
+          logic_prompt: string
+          parameters_needed: Json
+          quality_evals_prompt: string
+          updated_at: string | null
+        }
+        Insert: {
+          archetype_id: string
+          created_at?: string | null
+          dimension: string
+          logic_prompt: string
+          parameters_needed?: Json
+          quality_evals_prompt: string
+          updated_at?: string | null
+        }
+        Update: {
+          archetype_id?: string
+          created_at?: string | null
+          dimension?: string
+          logic_prompt?: string
+          parameters_needed?: Json
+          quality_evals_prompt?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       audition_scaffolds: {
         Row: {
           created_at: string | null
@@ -360,6 +390,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_master_banks: {
+        Row: {
+          bank_id: string
+          created_at: string | null
+          questions: Json
+          role_family: string
+          seniority_level: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          bank_id: string
+          created_at?: string | null
+          questions?: Json
+          role_family: string
+          seniority_level: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          bank_id?: string
+          created_at?: string | null
+          questions?: Json
+          role_family?: string
+          seniority_level?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       talent_profiles: {
         Row: {
