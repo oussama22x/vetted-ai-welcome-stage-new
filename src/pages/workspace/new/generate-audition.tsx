@@ -54,7 +54,7 @@ const GenerateAudition = () => {
 
   useEffect(() => {
     if (!projectId) {
-      navigate("/workspace/new/confirm-role-summary");
+      navigate("/workspace/new/jd-upload");
     }
   }, [projectId, navigate]);
 
