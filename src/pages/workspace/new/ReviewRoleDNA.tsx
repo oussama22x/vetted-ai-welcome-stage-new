@@ -55,10 +55,12 @@ interface ClarifierInputs {
 
 interface RoleDefinition {
   id: string;
-  definition_data: RoleDefinitionData;
-  context_flags: ContextFlags;
-  clarifier_inputs: ClarifierInputs;
-  weighted_dimensions: WeightedDimensions;
+  definition_data: {
+    context_flags: ContextFlags;
+    clarifier_inputs: ClarifierInputs;
+    weighted_dimensions: WeightedDimensions;
+    definition_data: RoleDefinitionData;
+  };
 }
 
 const ReviewRoleDNA = () => {
@@ -78,7 +80,7 @@ const ReviewRoleDNA = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("role_definitions")
-        .select("id, definition_data, context_flags, clarifier_inputs, weighted_dimensions")
+        .select("id, definition_data")
         .eq("project_id", projectId)
         .single();
 
@@ -118,9 +120,9 @@ const ReviewRoleDNA = () => {
   }
 
   const roleDef = roleDefQuery.data;
-  const weights = roleDef.weighted_dimensions?.weights || {};
-  const bankId = roleDef.weighted_dimensions?.bank_id || "N/A";
-  const rationale = roleDef.weighted_dimensions?.rationale || "";
+  const weights = roleDef.definition_data.weighted_dimensions?.weights || {};
+  const bankId = roleDef.definition_data.weighted_dimensions?.bank_id || "N/A";
+  const rationale = roleDef.definition_data.weighted_dimensions?.rationale || "";
 
   // Calculate total for percentage display
   const totalWeight = Object.values(weights).reduce((sum, val) => sum + (val || 0), 0);
@@ -182,17 +184,17 @@ const ReviewRoleDNA = () => {
             <div className="flex flex-wrap gap-3">
               <Badge variant="secondary" className="text-sm">
                 <Briefcase className="mr-2 h-3 w-3" />
-                {roleDef.context_flags.role_family}
+                {roleDef.definition_data.context_flags.role_family}
               </Badge>
               <Badge variant="secondary" className="text-sm">
-                {roleDef.context_flags.seniority}
+                {roleDef.definition_data.context_flags.seniority}
               </Badge>
-              {roleDef.context_flags.is_startup_context && (
+              {roleDef.definition_data.context_flags.is_startup_context && (
                 <Badge variant="default" className="text-sm">
                   Startup Context
                 </Badge>
               )}
-              {roleDef.context_flags.is_people_management && (
+              {roleDef.definition_data.context_flags.is_people_management && (
                 <Badge variant="default" className="text-sm">
                   People Management
                 </Badge>
@@ -219,55 +221,55 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="goals">
                 <AccordionTrigger>Goals & Objectives</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.goals}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.goals}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="stakeholders">
                 <AccordionTrigger>Stakeholders & Relationships</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.stakeholders}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.stakeholders}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="decision_horizon">
                 <AccordionTrigger>Decision Horizon</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.decision_horizon}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.decision_horizon}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="tools">
                 <AccordionTrigger>Tools & Systems</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.tools}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.tools}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="kpis">
                 <AccordionTrigger>KPIs & Success Metrics</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.kpis}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.kpis}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="constraints">
                 <AccordionTrigger>Constraints & Challenges</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.constraints}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.constraints}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="cognitive">
                 <AccordionTrigger>Cognitive Type</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.cognitive_type}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cognitive_type}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="team">
                 <AccordionTrigger>Team Topology</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.team_topology}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.team_topology}</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="culture">
                 <AccordionTrigger>Cultural Tone</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.cultural_tone}</p>
+                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cultural_tone}</p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -283,7 +285,7 @@ const ReviewRoleDNA = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {clarifierLabels.map((clarifier) => {
-                const isActive = roleDef.clarifier_inputs?.[clarifier.key as keyof ClarifierInputs];
+                const isActive = roleDef.definition_data.clarifier_inputs?.[clarifier.key as keyof ClarifierInputs];
                 return (
                   <div
                     key={clarifier.key}
