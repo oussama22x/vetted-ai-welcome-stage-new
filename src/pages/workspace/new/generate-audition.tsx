@@ -1,14 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/components/ui/use-toast";
 import { useProjectWizard } from "@/hooks/useProjectWizard";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 type AuditionScaffoldResponse = {
   status: 'READY' | 'GENERATING' | 'FAILED';
@@ -52,11 +55,46 @@ const GenerateAudition = () => {
   const { wizardState } = useProjectWizard();
   const projectId = wizardState.projectId || wizardState.project_id;
 
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+
+  const statusMessages = [
+    "📊 Analyzing role dimensions...",
+    "🎯 Matching questions to your role profile...",
+    "🔍 Evaluating question quality scores...",
+    "✨ Finalizing your audition outline...",
+    "🏗️ Building your question bank...",
+    "⚡ Almost there..."
+  ];
+
   useEffect(() => {
     if (!projectId) {
       navigate("/workspace/new/jd-upload");
     }
   }, [projectId, navigate]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % statusMessages.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [statusMessages.length]);
+
+  const formatTime = (minutes: number) => {
+    const totalSeconds = Math.floor(minutes * 60);
+    if (totalSeconds < 60) {
+      return `${totalSeconds}s`;
+    }
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}m ${secs}s`;
+  };
+
+  const calculateProgress = (elapsed: number, remaining: number) => {
+    const total = elapsed + remaining;
+    if (total === 0) return 0;
+    return Math.min(Math.round((elapsed / total) * 100), 95);
+  };
 
   const scaffoldQuery = useQuery({
     queryKey: ["audition-scaffold", projectId],
@@ -198,21 +236,98 @@ const GenerateAudition = () => {
     if (scaffold.status === 'GENERATING') {
       const elapsedMinutes = scaffold.elapsed_minutes || 0;
       const estimatedRemaining = scaffold.estimated_remaining_minutes || 3;
+      const progressPercentage = calculateProgress(elapsedMinutes, estimatedRemaining);
       
       return (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-4 py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 animate-pulse" />
+          
+          <CardContent className="relative flex flex-col items-center justify-center gap-6 py-16">
+            <div className="relative">
+              <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              <div className="absolute -top-2 -right-2 h-4 w-4 animate-ping">
+                <div className="h-full w-full rounded-full bg-primary/60" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-4 max-w-lg">
+              <p className="text-xl font-semibold">
                 Generating Your Custom Question Bank
               </p>
-              <p className="text-sm text-muted-foreground">
-                {scaffold.message || 'This typically takes 2-3 minutes...'}
+              
+              <p className="text-sm text-muted-foreground font-medium">
+                {statusMessages[messageIndex]}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Elapsed: {elapsedMinutes} min | Estimated remaining: {estimatedRemaining} min
-              </p>
+              
+              <div className="space-y-2">
+                <Progress value={progressPercentage} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {progressPercentage}% complete
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">⏱️ Elapsed:</span>
+                  <span className="font-mono font-semibold">{formatTime(elapsedMinutes)}</span>
+                </div>
+                <div className="h-4 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Remaining:</span>
+                  <span className="font-mono font-semibold">~{formatTime(estimatedRemaining)}</span>
+                </div>
+              </div>
+              
+              <Collapsible
+                open={isDetailsExpanded}
+                onOpenChange={setIsDetailsExpanded}
+                className="w-full"
+              >
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {isDetailsExpanded ? "Hide" : "Show"} what's happening behind the scenes
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform",
+                      isDetailsExpanded && "rotate-180"
+                    )} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <div className="rounded-lg border bg-muted/40 p-4 text-left space-y-3">
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      🧠 AI is working on:
+                    </p>
+                    <ul className="space-y-2 text-xs text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Generating 50+ custom questions across 6 performance dimensions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Evaluating each question for quality and relevance (1-3 stars)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Selecting the top 20 questions that match your role profile</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Creating a reusable question bank for similar roles</span>
+                      </li>
+                    </ul>
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground">
+                        💡 <span className="font-medium">First-time generation</span> takes 2-3 minutes. 
+                        Similar roles in the future will load <span className="font-medium">instantly</span> from this bank!
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </CardContent>
         </Card>

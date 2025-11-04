@@ -2,14 +2,17 @@ import { useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Brain, Zap, MessageSquare, Lightbulb, Heart, Scale, HelpCircle, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProjectLayout } from "@/components/project/ProjectLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 import type { ProjectDetail } from "./project-detail/types";
 
@@ -94,21 +97,62 @@ const ProjectDetailPage = () => {
 
   const roleDefinition = project?.role_definitions ?? null;
   const auditionScaffold = roleDefinition?.audition_scaffolds ?? null;
-  const dimensionJustification = useMemo(() => {
-    const justification = auditionScaffold?.scaffold_data?.dimension_justification;
 
-    if (typeof justification === "string") {
-      const trimmed = justification.trim();
-      return trimmed.length ? trimmed : null;
+  const questionsByDimension = useMemo(() => {
+    const scaffoldData = auditionScaffold?.scaffold_data as any;
+    const questions = scaffoldData?.questions;
+    if (!questions || !Array.isArray(questions)) return {};
+    
+    return questions.reduce((acc: any, question: any) => {
+      const dim = question.dimension || 'other';
+      if (!acc[dim]) acc[dim] = [];
+      acc[dim].push(question);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [auditionScaffold?.scaffold_data]);
+
+  const bankId = (auditionScaffold?.scaffold_data as any)?.bank_id;
+  const cacheHit = (auditionScaffold?.scaffold_data as any)?.cache_hit;
+
+  const dimensionWeights = useMemo(() => {
+    const defData = roleDefinition?.definition_data as any;
+    return defData?.weighted_dimensions?.weights;
+  }, [roleDefinition?.definition_data]);
+
+  const dimensionRationale = useMemo(() => {
+    const defData = roleDefinition?.definition_data as any;
+    const rationale = defData?.weighted_dimensions?.rationale;
+    if (typeof rationale === 'string') {
+      return rationale.trim() || null;
     }
+    return null;
+  }, [roleDefinition?.definition_data]);
 
-    if (justification === null || justification === undefined) {
-      return null;
-    }
+  const dimensionConfig: Record<string, { label: string; icon: any; color: string }> = {
+    cognitive: { label: 'Cognitive', icon: Brain, color: 'text-blue-500' },
+    execution: { label: 'Execution', icon: Zap, color: 'text-yellow-500' },
+    communication_collaboration: { label: 'Communication & Collaboration', icon: MessageSquare, color: 'text-green-500' },
+    adaptability_learning: { label: 'Adaptability & Learning', icon: Lightbulb, color: 'text-purple-500' },
+    emotional_intelligence: { label: 'Emotional Intelligence', icon: Heart, color: 'text-pink-500' },
+    judgment_ethics: { label: 'Judgment & Ethics', icon: Scale, color: 'text-indigo-500' },
+  };
 
-    const fallback = String(justification).trim();
-    return fallback.length ? fallback : null;
-  }, [auditionScaffold?.scaffold_data?.dimension_justification]);
+  const renderQualityStars = (score: number) => {
+    return (
+      <div className="flex gap-0.5">
+        {[1, 2, 3].map(star => (
+          <Star
+            key={star}
+            className={cn(
+              "h-3 w-3",
+              star <= score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+            )}
+          />
+        ))}
+      </div>
+    );
+  };
+
   const companyName = useMemo(() => {
     const raw = project?.company_name ?? "";
     const trimmed = raw.trim();
@@ -235,36 +279,142 @@ const ProjectDetailPage = () => {
 
           <section>
             <Card>
-              <CardHeader className="space-y-2 pb-4 sm:flex sm:items-start sm:justify-between sm:space-y-0">
-                <div className="space-y-1">
-                  <CardTitle>Approved Audition Outline</CardTitle>
-                  <CardDescription>
-                    The experience candidates will complete when participating in this Audition.
-                  </CardDescription>
+              <CardHeader className="space-y-2 pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>Approved Audition Outline</CardTitle>
+                    <CardDescription>
+                      20 carefully selected questions across 6 performance dimensions
+                    </CardDescription>
+                  </div>
+                  {bankId && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {cacheHit ? '♻️ Cached Bank' : '🆕 New Bank'}
+                    </Badge>
+                  )}
                 </div>
-                <Button variant="link" className="px-0 text-sm font-semibold" disabled>
-                  View Role DNA
-                </Button>
               </CardHeader>
               <CardContent className="space-y-6">
-                {auditionScaffold?.scaffold_preview_html ? (
-                  <div
-                    className="prose max-w-none rounded-lg border bg-card/60 px-6 py-5 text-sm"
-                    dangerouslySetInnerHTML={{ __html: auditionScaffold.scaffold_preview_html }}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    The audition outline will appear here once it has been approved.
-                  </p>
+                {bankId && (
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                          Question Bank ID
+                        </p>
+                        <p className="font-mono text-sm">{bankId}</p>
+                      </div>
+                      {cacheHit && (
+                        <Badge variant="secondary" className="text-xs">
+                          Using cached questions
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 )}
-
-                <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rationale</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {dimensionJustification ??
-                      "Context for this audition's dimensions will appear here."}
-                  </p>
-                </div>
+                
+                {Object.keys(questionsByDimension).length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full space-y-2">
+                    {Object.entries(questionsByDimension).map(([dimension, questions]) => {
+                      const config = dimensionConfig[dimension];
+                      const Icon = config?.icon || HelpCircle;
+                      const label = config?.label || dimension;
+                      const iconColor = config?.color || 'text-muted-foreground';
+                      const questionList = questions as any[];
+                      
+                      return (
+                        <AccordionItem key={dimension} value={dimension} className="border rounded-lg px-4">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3">
+                              <Icon className={cn("h-5 w-5", iconColor)} />
+                              <span className="font-semibold">{label}</span>
+                              <Badge variant="secondary" className="ml-2">
+                                {questionList.length} question{questionList.length !== 1 ? 's' : ''}
+                              </Badge>
+                              {dimensionWeights?.[dimension] && (
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({Math.round(dimensionWeights[dimension] * 100)}% weight)
+                                </span>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="space-y-4 pt-2">
+                              {questionList.map((question: any, index: number) => (
+                                <div
+                                  key={question.question_id}
+                                  className="border-l-4 border-primary/30 pl-4 py-3 bg-muted/20 rounded-r"
+                                >
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium leading-relaxed">
+                                      <span className="text-muted-foreground mr-2">Q{index + 1}:</span>
+                                      {question.question_text}
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className="text-xs font-normal">
+                                        {question.archetype_id?.replace(/_/g, ' ')}
+                                      </Badge>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-muted-foreground">Quality:</span>
+                                        {renderQualityStars(question.quality_score)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      The audition questions will appear here once the generation is complete.
+                    </p>
+                  </div>
+                )}
+                
+                {dimensionWeights && (
+                  <div className="space-y-3 rounded-lg border bg-card p-4">
+                    <h3 className="text-sm font-semibold">Performance Focus</h3>
+                    <div className="space-y-2">
+                      {Object.entries(dimensionWeights)
+                        .sort(([, a], [, b]) => (b as number) - (a as number))
+                        .map(([dimension, weight]) => {
+                          const config = dimensionConfig[dimension];
+                          const Icon = config?.icon || HelpCircle;
+                          const label = config?.label || dimension;
+                          const percentage = Math.round((weight as number) * 100);
+                          
+                          return (
+                            <div key={dimension} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="font-medium">{label}</span>
+                                </div>
+                                <span className="text-muted-foreground">{percentage}%</span>
+                              </div>
+                              <Progress value={percentage} className="h-1.5" />
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+                
+                {dimensionRationale && (
+                  <div className="space-y-2 rounded-lg border border-dashed border-muted bg-muted/40 px-4 py-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Rationale
+                    </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {dimensionRationale}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </section>
