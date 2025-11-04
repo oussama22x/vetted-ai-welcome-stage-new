@@ -30,7 +30,7 @@ const ConfirmRoleSummary = () => {
     }
   }, [wizardState.jdContent, navigate]);
 
-  // Simplified mutation: ONLY create project with parsed JD data
+  // Create project and generate Role DNA before navigating
   const confirmMutation = useMutation({
     mutationFn: async () => {
       const jdContent = wizardState.jdContent;
@@ -39,7 +39,7 @@ const ConfirmRoleSummary = () => {
         throw new Error("Job description missing. Please return to the previous step.");
       }
 
-      // Create project using the database function
+      // Step 1: Create project
       const { data: projectId, error: createError } = await supabase.rpc(
         "create_draft_project_v3",
         {
@@ -61,6 +61,35 @@ const ConfirmRoleSummary = () => {
 
       if (!project_id) {
         throw new Error("We couldn't create your project. Please try again.");
+      }
+
+      // Step 2: Generate Role DNA immediately
+      const { data: roleDNA, error: roleError } = await supabase.functions.invoke(
+        'fn_generate_role_definition',
+        { 
+          body: { 
+            jd_text: jdContent, 
+            company_name: companyName || undefined 
+          } 
+        }
+      );
+
+      if (roleError || !roleDNA) {
+        console.error("Failed to generate role DNA", roleError);
+        throw new Error("Failed to analyze role DNA. Please try again.");
+      }
+
+      // Step 3: Save Role DNA to database
+      const { error: insertError } = await supabase
+        .from('role_definitions')
+        .insert({
+          project_id: project_id,
+          definition_data: roleDNA
+        });
+
+      if (insertError) {
+        console.error("Failed to save role definition", insertError);
+        throw new Error("Failed to save role definition. Please try again.");
       }
 
       return { project_id };
@@ -194,7 +223,7 @@ const ConfirmRoleSummary = () => {
                 {confirmMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Project...
+                    Analyzing role DNA...
                   </>
                 ) : (
                   "Looks Good, Continue →"

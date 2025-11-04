@@ -78,30 +78,15 @@ const ReviewRoleDNA = () => {
   const roleDefQuery = useQuery({
     queryKey: ["role-definition", projectId],
     enabled: !!projectId,
-    refetchInterval: (query) => {
-      // Continue polling until we have complete data
-      const data = query.state.data as RoleDefinition | null;
-      if (!data?.definition_data) return 2000;
-      
-      const def = data.definition_data as any;
-      const isComplete = def?.context_flags && 
-                        def?.weighted_dimensions && 
-                        def?.clarifier_inputs &&
-                        def?.weighted_dimensions?.bank_id;
-      
-      return isComplete ? false : 2000;
-    },
     queryFn: async () => {
       const { data, error } = await supabase
         .from("role_definitions")
-        .select("id, definition_data, created_at")
+        .select("id, definition_data")
         .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .single();
 
       if (error) throw error;
-      return data as unknown as RoleDefinition | null;
+      return data as unknown as RoleDefinition;
     },
   });
 
@@ -130,33 +115,6 @@ const ReviewRoleDNA = () => {
         <div className="max-w-md text-center space-y-4">
           <p className="text-destructive">Failed to load role definition</p>
           <Button onClick={() => roleDefQuery.refetch()}>Retry</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show preparing state when data is incomplete
-  const roleData = roleDefQuery.data;
-  const isDataComplete = roleData?.definition_data && 
-    (roleData.definition_data as any)?.context_flags &&
-    (roleData.definition_data as any)?.weighted_dimensions &&
-    (roleData.definition_data as any)?.weighted_dimensions?.bank_id;
-
-  if (!isDataComplete) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="max-w-md text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <div className="space-y-2">
-            <p className="text-lg font-medium">We're preparing your Role DNA…</p>
-            <p className="text-sm text-muted-foreground">This page will auto-refresh when ready</p>
-          </div>
-          <div className="flex gap-2 justify-center pt-2">
-            <Button variant="outline" onClick={() => navigate("/workspace/new/confirm-role-summary")}>
-              ← Back
-            </Button>
-            <Button onClick={() => roleDefQuery.refetch()}>Refresh now</Button>
-          </div>
         </div>
       </div>
     );

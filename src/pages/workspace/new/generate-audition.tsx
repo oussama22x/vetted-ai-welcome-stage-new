@@ -144,14 +144,12 @@ const GenerateAudition = () => {
         throw new Error("No audition scaffold available to approve.");
       }
 
-      // Get role definition ID (use latest if multiple exist)
+      // Get role definition ID
       const { data: roleDefData, error: roleDefError } = await supabase
         .from("role_definitions")
         .select("id")
         .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .single();
 
       if (roleDefError || !roleDefData) {
         throw new Error("Role definition not found");

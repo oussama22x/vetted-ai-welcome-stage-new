@@ -108,20 +108,9 @@ async function getOrGenerateRoleDefinition(
     throw new Error(`Failed to fetch role definition: ${fetchError.message}`);
   }
   
-  // Validate completeness: must have all required nested fields
-  if (existingDef?.definition_data) {
-    const def = existingDef.definition_data as any;
-    const isComplete = def.context_flags && 
-                      def.weighted_dimensions && 
-                      def.clarifier_inputs &&
-                      def.weighted_dimensions.bank_id;
-    
-    if (isComplete) {
-      console.log('✅ Found complete role definition');
-      return existingDef.definition_data as FinalRoleDefinition;
-    } else {
-      console.log('⚠️ Found incomplete stub, will regenerate');
-    }
+  if (existingDef && existingDef.definition_data) {
+    console.log('✅ Found existing role definition');
+    return existingDef.definition_data as FinalRoleDefinition;
   }
   
   // Generate new role definition
