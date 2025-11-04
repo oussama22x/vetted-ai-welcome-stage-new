@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Brain, Briefcase, Building2, CheckCircle2, Info, Loader2, Users } from "lucide-react";
+import { ArrowLeft, Brain, Briefcase, Building2, CheckCircle2, Info, Loader2, Users, HelpCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectWizard } from "@/hooks/useProjectWizard";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -144,15 +144,15 @@ const ReviewRoleDNA = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10">
-        <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <span className="text-sm text-muted-foreground">Step 3 of 5</span>
-        </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background animate-fade-in">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10">
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={() => navigate("/workspace/new/confirm-role-summary")}>
+              ← Back
+            </Button>
+            <span className="text-sm text-muted-foreground">Step 3 of 5: Review Role DNA</span>
+          </div>
 
         <div className="space-y-3">
           <h1 className="text-3xl font-semibold">Review Role DNA</h1>
@@ -163,13 +163,13 @@ const ReviewRoleDNA = () => {
         </div>
 
         {/* Context Flags Card */}
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Role Context
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="max-w-xs">High-level classification used to match this role to our question bank</p>
@@ -209,7 +209,7 @@ const ReviewRoleDNA = () => {
         </Card>
 
         {/* Role Essentials Accordion */}
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
           <CardHeader>
             <CardTitle>Role Essentials</CardTitle>
             <CardDescription>Detailed breakdown of the role's requirements and context</CardDescription>
@@ -275,7 +275,7 @@ const ReviewRoleDNA = () => {
         </Card>
 
         {/* Clarifier Signals */}
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
           <CardHeader>
             <CardTitle>Role Characteristics</CardTitle>
             <CardDescription>Situational factors that influence question selection</CardDescription>
@@ -307,17 +307,18 @@ const ReviewRoleDNA = () => {
         </Card>
 
         {/* Dimension Weights */}
-        <Card>
+        <Card className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Performance Dimension Weights
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="max-w-xs">
-                    These weights determine how many questions from each dimension will be included in your audition
+                <TooltipContent className="max-w-sm">
+                  <p className="text-sm">
+                    These weights determine how many questions will be selected from each performance dimension. 
+                    Higher weights mean more focus on that dimension in the audition.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -331,11 +332,29 @@ const ReviewRoleDNA = () => {
                 const info = dimensionLabels[dimension];
                 const Icon = info?.icon || Brain;
 
+                const dimensionTooltips: Record<string, string> = {
+                  cognitive: "Problem-solving, analytical thinking, and decision-making abilities",
+                  execution: "Ability to deliver results, manage time, and drive projects to completion",
+                  communication: "Teamwork, stakeholder management, and interpersonal skills",
+                  adaptability: "Flexibility, continuous learning, and resilience in changing environments",
+                  emotional_intelligence: "Self-awareness, empathy, and managing emotions in professional settings",
+                  judgment: "Ethical decision-making, integrity, and sound professional judgment"
+                };
+
                 return (
                   <div key={dimension} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Icon className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">
+                              <strong>{info?.label || dimension}:</strong> {dimensionTooltips[dimension]}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
                         <span className="text-sm font-medium">{info?.label || dimension}</span>
                       </div>
                       <span className="text-sm font-semibold text-primary">{percentage}%</span>
@@ -359,12 +378,13 @@ const ReviewRoleDNA = () => {
           <Button variant="outline" onClick={handleBack}>
             ← Edit Job Description
           </Button>
-          <Button onClick={handleContinue} size="lg">
+          <Button onClick={handleContinue} size="lg" className="transition-all duration-200 hover:scale-105">
             This Looks Right, Continue →
           </Button>
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

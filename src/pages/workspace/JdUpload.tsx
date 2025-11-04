@@ -291,10 +291,10 @@ export default function JdUpload() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-2xl animate-fade-in">
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-muted-foreground">Step 1 of 4</div>
+            <div className="text-sm text-muted-foreground">Step 1 of 5: Upload Job Description</div>
             <Button
               variant="ghost"
               size="sm"
@@ -378,6 +378,7 @@ export default function JdUpload() {
               onClick={handleContinue}
               disabled={jd.length < 50 || isOverCharLimit || isLoading || isParsingFile}
               size="lg"
+              className="transition-all duration-200 hover:scale-105"
             >
               {isLoading ? (
                 <>

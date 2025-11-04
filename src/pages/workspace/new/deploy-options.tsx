@@ -95,11 +95,11 @@ const DeployOptions = () => {
   const isDisabled = !projectId || isLoading;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10">
         <header className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Step 4 of 4: Choose Candidate Source</p>
+            <p className="text-sm text-muted-foreground">Step 5 of 5: Choose Candidate Source</p>
             <Button
               variant="outline"
               onClick={() => navigate("/workspace/new/generate-audition")}
@@ -144,7 +144,7 @@ const DeployOptions = () => {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <Button onClick={handleSaaSSelection} disabled={isDisabled} size="lg">
+                    <Button onClick={handleSaaSSelection} disabled={isDisabled} size="lg" className="transition-all duration-200 hover:scale-105">
                       Select &amp; Go to Workspace
                     </Button>
                   </CardContent>
@@ -174,7 +174,7 @@ const DeployOptions = () => {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <Button onClick={handleServiceSelection} disabled={isDisabled} size="lg">
+                    <Button onClick={handleServiceSelection} disabled={isDisabled} size="lg" className="transition-all duration-200 hover:scale-105">
                       Request VettedAI Sourcing
                     </Button>
                   </CardContent>

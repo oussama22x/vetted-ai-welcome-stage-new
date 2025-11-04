@@ -100,15 +100,19 @@ export default {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-20px)" },
         },
-        "pulse-glow": {
-          "0%, 100%": { 
-            opacity: "1",
+        "scale-out": {
+          from: { transform: "scale(1)", opacity: "1" },
+          to: { transform: "scale(0.95)", opacity: "0" }
+        },
+        "scale-in": {
+          "0%": {
+            transform: "scale(0.95)",
+            opacity: "0"
+          },
+          "100%": {
             transform: "scale(1)",
-          },
-          "50%": { 
-            opacity: "0.6",
-            transform: "scale(1.1)",
-          },
+            opacity: "1"
+          }
         },
         "fade-in-up": {
           "0%": { opacity: "0", transform: "translateY(30px)" },
@@ -133,6 +137,7 @@ export default {
         "slide-in-up": "slide-in-up 0.6s ease-out",
         "float": "float 6s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "scale-in": "scale-in 0.3s ease-out",
         "fade-in-up": "fade-in-up 0.6s ease-out",
         "draw-polygon": "draw-polygon 0.8s ease-out forwards",
       },

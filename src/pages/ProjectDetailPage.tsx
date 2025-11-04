@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProjectLayout } from "@/components/project/ProjectLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -139,17 +139,26 @@ const ProjectDetailPage = () => {
 
   const renderQualityStars = (score: number) => {
     return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3].map(star => (
-          <Star
-            key={star}
-            className={cn(
-              "h-3 w-3",
-              star <= score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
-            )}
-          />
-        ))}
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex gap-0.5 cursor-help">
+            {[1, 2, 3].map(star => (
+              <Star
+                key={star}
+                className={cn(
+                  "h-3 w-3",
+                  star <= score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                )}
+              />
+            ))}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">
+            <strong>Quality Score:</strong> {score}/3 - Indicates question clarity, relevance, and discriminatory power
+          </p>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 

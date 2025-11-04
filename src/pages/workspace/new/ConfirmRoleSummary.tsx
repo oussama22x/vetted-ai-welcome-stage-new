@@ -102,7 +102,7 @@ const ConfirmRoleSummary = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
         <div className="flex items-center justify-between">
           <Button
@@ -112,7 +112,7 @@ const ConfirmRoleSummary = () => {
           >
             ← Back
           </Button>
-          <span className="text-sm text-muted-foreground">Step 2 of 5</span>
+          <span className="text-sm text-muted-foreground">Step 2 of 5: Confirm Role Details</span>
         </div>
 
         <div className="space-y-3">
@@ -189,6 +189,7 @@ const ConfirmRoleSummary = () => {
                 onClick={handleConfirm}
                 disabled={!roleTitle.trim() || !jobSummary.trim() || confirmMutation.isPending}
                 size="lg"
+                className="transition-all duration-200 hover:scale-105"
               >
                 {confirmMutation.isPending ? (
                   <>
