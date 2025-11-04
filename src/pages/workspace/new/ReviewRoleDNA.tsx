@@ -51,6 +51,7 @@ interface ClarifierInputs {
   customer_facing?: boolean;
   regulated?: boolean;
   analytical?: boolean;
+  analytical_data_heavy?: boolean;
 }
 
 interface RoleDefinition {
@@ -77,15 +78,18 @@ const ReviewRoleDNA = () => {
   const roleDefQuery = useQuery({
     queryKey: ["role-definition", projectId],
     enabled: !!projectId,
+    refetchInterval: (query) => (!query.state.data ? 2000 : false),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("role_definitions")
-        .select("id, definition_data")
+        .select("id, definition_data, created_at")
         .eq("project_id", projectId)
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
-      return data as unknown as RoleDefinition;
+      return data as unknown as RoleDefinition | null;
     },
   });
 
@@ -108,12 +112,32 @@ const ReviewRoleDNA = () => {
     );
   }
 
-  if (roleDefQuery.isError || !roleDefQuery.data) {
+  if (roleDefQuery.isError) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="max-w-md text-center space-y-4">
           <p className="text-destructive">Failed to load role definition</p>
           <Button onClick={() => roleDefQuery.refetch()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleDefQuery.data) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="max-w-md text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <div className="space-y-2">
+            <p className="text-lg font-medium">We're preparing your Role DNA…</p>
+            <p className="text-sm text-muted-foreground">This page will auto-refresh when ready</p>
+          </div>
+          <div className="flex gap-2 justify-center pt-2">
+            <Button variant="outline" onClick={() => navigate("/workspace/new/confirm-role-summary")}>
+              ← Back
+            </Button>
+            <Button onClick={() => roleDefQuery.refetch()}>Refresh now</Button>
+          </div>
         </div>
       </div>
     );
@@ -285,7 +309,9 @@ const ReviewRoleDNA = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {clarifierLabels.map((clarifier) => {
-                const isActive = roleDef.definition_data.clarifier_inputs?.[clarifier.key as keyof ClarifierInputs];
+                const clarifierInputs = roleDef.definition_data.clarifier_inputs;
+                const isActive = clarifierInputs?.[clarifier.key as keyof ClarifierInputs] || 
+                  (clarifier.key === 'analytical' && clarifierInputs?.analytical_data_heavy);
                 return (
                   <div
                     key={clarifier.key}

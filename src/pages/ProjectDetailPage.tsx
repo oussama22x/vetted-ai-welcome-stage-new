@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, Brain, Zap, MessageSquare, Lightbulb, Heart, Scale, HelpCircle, Star } from "lucide-react";
+import { ArrowLeft, Loader2, Brain, Zap, MessageSquare, Lightbulb, Heart, Scale, HelpCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -137,30 +137,6 @@ const ProjectDetailPage = () => {
     judgment_ethics: { label: 'Judgment & Ethics', icon: Scale, color: 'text-indigo-500' },
   };
 
-  const renderQualityStars = (score: number) => {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex gap-0.5 cursor-help">
-            {[1, 2, 3].map(star => (
-              <Star
-                key={star}
-                className={cn(
-                  "h-3 w-3",
-                  star <= score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
-                )}
-              />
-            ))}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="text-xs">
-            <strong>Quality Score:</strong> {score}/3 - Indicates question clarity, relevance, and discriminatory power
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    );
-  };
 
   const companyName = useMemo(() => {
     const raw = project?.company_name ?? "";
@@ -363,10 +339,6 @@ const ProjectDetailPage = () => {
                                       <Badge variant="outline" className="text-xs font-normal">
                                         {question.archetype_id?.replace(/_/g, ' ')}
                                       </Badge>
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground">Quality:</span>
-                                        {renderQualityStars(question.quality_score)}
-                                      </div>
                                     </div>
                                   </div>
                                 </div>
