@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.fn_notify_sourcing_request]
 verify_jwt = false
+
+[functions.fn_ai_question_factory]
+verify_jwt = false
