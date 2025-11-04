@@ -131,7 +131,7 @@ async function getOrGenerateRoleDefinition(
     'fn_generate_role_definition',
     {
       body: {
-        job_description: project.job_description,
+        jd_text: project.job_description,
         company_name: project.company_name || undefined
       },
       headers: {
@@ -144,23 +144,23 @@ async function getOrGenerateRoleDefinition(
     throw new Error(`Failed to generate role definition: ${roleDefError.message}`);
   }
   
-  if (!roleDefData?.definition_data) {
-    throw new Error('Invalid role definition response');
+  if (!roleDefData?.weighted_dimensions?.bank_id) {
+    throw new Error('Invalid role definition response: missing bank_id');
   }
   
-  // Save to database
+  // Save to database (save full response, not nested property)
   const { error: saveError } = await supabase
     .from('role_definitions')
     .insert({
       project_id: projectId,
-      definition_data: roleDefData.definition_data
+      definition_data: roleDefData
     });
   
   if (saveError) {
     console.warn('⚠️ Failed to save role definition:', saveError.message);
   }
   
-  return roleDefData.definition_data as FinalRoleDefinition;
+  return roleDefData as FinalRoleDefinition;
 }
 
 /**
