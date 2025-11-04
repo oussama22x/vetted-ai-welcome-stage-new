@@ -57,6 +57,7 @@ const GenerateAudition = () => {
 
   const [messageIndex, setMessageIndex] = useState(0);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const [clientElapsedSeconds, setClientElapsedSeconds] = useState(0);
 
   const statusMessages = [
     "📊 Analyzing role dimensions...",
@@ -90,10 +91,21 @@ const GenerateAudition = () => {
     return `${mins}m ${secs}s`;
   };
 
-  const calculateProgress = (elapsed: number, remaining: number) => {
-    const total = elapsed + remaining;
-    if (total === 0) return 0;
-    return Math.min(Math.round((elapsed / total) * 100), 95);
+  const calculateProgress = (elapsedSeconds: number, remainingMinutes: number) => {
+    const totalSeconds = elapsedSeconds + (remainingMinutes * 60);
+    if (totalSeconds === 0) return 0;
+    
+    const rawProgress = (elapsedSeconds / totalSeconds) * 100;
+    
+    // Hard cap at 95%
+    if (rawProgress >= 95) return 95;
+    
+    // Slow down between 90-95%
+    if (rawProgress >= 90) {
+      return 90 + (rawProgress - 90) * 0.2;
+    }
+    
+    return Math.round(rawProgress);
   };
 
   const scaffoldQuery = useQuery({
@@ -131,6 +143,25 @@ const GenerateAudition = () => {
       );
     },
   });
+
+  // Client-side timer for smooth progress - must be after scaffoldQuery
+  useEffect(() => {
+    const scaffold = scaffoldQuery.data;
+    if (scaffold?.status === 'GENERATING') {
+      // Sync with server on new data
+      const serverElapsedSeconds = (scaffold.elapsed_minutes || 0) * 60;
+      setClientElapsedSeconds(serverElapsedSeconds);
+      
+      // Run client-side timer
+      const interval = setInterval(() => {
+        setClientElapsedSeconds(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setClientElapsedSeconds(0);
+    }
+  }, [scaffoldQuery.data?.status, scaffoldQuery.data?.elapsed_minutes]);
 
   const approveMutation = useMutation({
     mutationFn: async () => {
@@ -234,9 +265,9 @@ const GenerateAudition = () => {
 
     // Handle GENERATING state
     if (scaffold.status === 'GENERATING') {
-      const elapsedMinutes = scaffold.elapsed_minutes || 0;
       const estimatedRemaining = scaffold.estimated_remaining_minutes || 3;
-      const progressPercentage = calculateProgress(elapsedMinutes, estimatedRemaining);
+      const progressPercentage = calculateProgress(clientElapsedSeconds, estimatedRemaining);
+      const displayMinutes = clientElapsedSeconds / 60;
       
       return (
         <Card className="relative overflow-hidden">
@@ -269,7 +300,7 @@ const GenerateAudition = () => {
               <div className="flex items-center justify-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">⏱️ Elapsed:</span>
-                  <span className="font-mono font-semibold">{formatTime(elapsedMinutes)}</span>
+                  <span className="font-mono font-semibold">{formatTime(displayMinutes)}</span>
                 </div>
                 <div className="h-4 w-px bg-border" />
                 <div className="flex items-center gap-2">
@@ -382,9 +413,6 @@ const GenerateAudition = () => {
                         <span className="bg-muted px-2 py-1 rounded text-xs">
                           {question.archetype_id}
                         </span>
-                        <span className="bg-muted px-2 py-1 rounded text-xs">
-                          Quality: {question.quality_score}/3
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -393,15 +421,6 @@ const GenerateAudition = () => {
             </div>
           </CardContent>
         </Card>
-
-        {scaffold.bank_id && (
-          <div className="bg-muted/50 border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">
-              Bank ID: <span className="font-mono text-xs">{scaffold.bank_id}</span>
-              {scaffold.cache_hit && ' • Using cached question bank'}
-            </p>
-          </div>
-        )}
 
         <div className="flex justify-end">
           <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>

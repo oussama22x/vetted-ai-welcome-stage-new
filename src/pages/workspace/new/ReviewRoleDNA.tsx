@@ -201,13 +201,6 @@ const ReviewRoleDNA = () => {
                 </Badge>
               )}
             </div>
-
-            <div className="pt-2 border-t">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Question Bank ID:</span>{" "}
-                <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{bankId}</span>
-              </p>
-            </div>
           </CardContent>
         </Card>
 
