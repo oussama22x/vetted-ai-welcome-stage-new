@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Brain, Briefcase, Building2, CheckCircle2, Info, Loader2, Users, HelpCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { useProjectWizard } from "@/hooks/useProjectWizard";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,6 +71,10 @@ const ReviewRoleDNA = () => {
   const { wizardState, saveWizardState } = useProjectWizard();
   const projectId = wizardState.projectId || wizardState.project_id;
 
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedEssentials, setEditedEssentials] = useState<RoleDefinitionData | null>(null);
+  const [editedWeights, setEditedWeights] = useState<Record<string, number>>({});
+
   useEffect(() => {
     if (!projectId) {
       navigate("/workspace/new/jd-upload");
@@ -90,12 +96,54 @@ const ReviewRoleDNA = () => {
     },
   });
 
+  const saveChangesMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId || !roleDef) return;
+
+      const updatedDefinitionData = {
+        ...roleDef.definition_data,
+        definition_data: editedEssentials!,
+        weighted_dimensions: {
+          ...roleDef.definition_data.weighted_dimensions,
+          weights: editedWeights
+        }
+      };
+
+      const { error } = await supabase
+        .from("role_definitions")
+        .update({ definition_data: updatedDefinitionData as any })
+        .eq("id", roleDef.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      roleDefQuery.refetch();
+      setIsEditMode(false);
+      setEditedEssentials(null);
+      setEditedWeights({});
+    },
+    onError: (error) => {
+      console.error("Failed to save changes:", error);
+      alert("Failed to save changes. Please try again.");
+    }
+  });
+
   const handleContinue = () => {
     navigate("/workspace/new/generate-audition");
   };
 
   const handleBack = () => {
     navigate("/workspace/new/confirm-role-summary");
+  };
+
+  const validateWeights = () => {
+    if (!isEditMode) return true;
+    const total = Object.values(editedWeights).reduce((sum, val) => sum + val, 0);
+    return total === 100;
+  };
+
+  const calculateEditedTotal = () => {
+    return Object.values(editedWeights).reduce((sum, val) => sum + val, 0);
   };
 
   if (roleDefQuery.isLoading) {
@@ -126,7 +174,7 @@ const ReviewRoleDNA = () => {
   const rationale = roleDef.definition_data.weighted_dimensions?.rationale || "";
 
   // Calculate total for percentage display
-  const totalWeight = Object.values(weights).reduce((sum, val) => sum + (val || 0), 0);
+  const totalWeight = Object.values(isEditMode ? editedWeights : weights).reduce((sum, val) => sum + (val || 0), 0);
 
   const dimensionLabels: Record<string, { label: string; icon: any }> = {
     cognitive: { label: "Cognitive", icon: Brain },
@@ -215,55 +263,127 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="goals">
                 <AccordionTrigger>Goals & Objectives</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.goals}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.goals || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, goals: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.goals}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="stakeholders">
                 <AccordionTrigger>Stakeholders & Relationships</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.stakeholders}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.stakeholders || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, stakeholders: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.stakeholders}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="decision_horizon">
                 <AccordionTrigger>Decision Horizon</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.decision_horizon}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.decision_horizon || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, decision_horizon: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.decision_horizon}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="tools">
                 <AccordionTrigger>Tools & Systems</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.tools}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.tools || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, tools: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.tools}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="kpis">
                 <AccordionTrigger>KPIs & Success Metrics</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.kpis}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.kpis || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, kpis: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.kpis}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="constraints">
                 <AccordionTrigger>Constraints & Challenges</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.constraints}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.constraints || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, constraints: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.constraints}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="cognitive">
                 <AccordionTrigger>Cognitive Type</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cognitive_type}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.cognitive_type || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, cognitive_type: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cognitive_type}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="team">
                 <AccordionTrigger>Team Topology</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.team_topology}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.team_topology || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, team_topology: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.team_topology}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="culture">
                 <AccordionTrigger>Cultural Tone</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cultural_tone}</p>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editedEssentials?.cultural_tone || ""}
+                      onChange={(e) => setEditedEssentials(prev => ({ ...prev!, cultural_tone: e.target.value }))}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{roleDef.definition_data.definition_data.cultural_tone}</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -325,7 +445,7 @@ const ReviewRoleDNA = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              {Object.entries(weights).map(([dimension, weight]) => {
+              {Object.entries(isEditMode ? editedWeights : weights).map(([dimension, weight]) => {
                 const percentage = totalWeight > 0 ? ((weight / totalWeight) * 100).toFixed(0) : "0";
                 const info = dimensionLabels[dimension];
                 const Icon = info?.icon || Brain;
@@ -357,11 +477,57 @@ const ReviewRoleDNA = () => {
                       </div>
                       <span className="text-sm font-semibold text-primary">{percentage}%</span>
                     </div>
-                    <Progress value={Number(percentage)} className="h-2" />
+                    
+                    {isEditMode ? (
+                      <Slider
+                        value={[weight]}
+                        min={0}
+                        max={100}
+                        step={5}
+                        onValueChange={([newValue]) => {
+                          setEditedWeights(prev => ({ ...prev, [dimension]: newValue }));
+                        }}
+                        className="py-2"
+                      />
+                    ) : (
+                      <Progress value={Number(percentage)} className="h-2" />
+                    )}
                   </div>
                 );
               })}
             </div>
+
+            {isEditMode && (
+              <div className={`p-3 rounded-lg border ${
+                validateWeights() 
+                  ? "bg-green-50 border-green-200 text-green-800" 
+                  : "bg-yellow-50 border-yellow-200 text-yellow-800"
+              }`}>
+                <p className="text-sm font-medium">
+                  Total: {calculateEditedTotal()}% / 100%
+                  {!validateWeights() && " - Weights must sum to exactly 100%"}
+                </p>
+                {!validateWeights() && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => {
+                      const dimensions = Object.keys(editedWeights);
+                      const equalWeight = Math.floor(100 / dimensions.length);
+                      const remainder = 100 - (equalWeight * dimensions.length);
+                      const balanced = dimensions.reduce((acc, dim, idx) => {
+                        acc[dim] = equalWeight + (idx === 0 ? remainder : 0);
+                        return acc;
+                      }, {} as Record<string, number>);
+                      setEditedWeights(balanced);
+                    }}
+                    className="h-auto p-0 text-yellow-800 hover:text-yellow-900"
+                  >
+                    Auto-Balance Weights
+                  </Button>
+                )}
+              </div>
+            )}
 
             {rationale && (
               <div className="pt-4 border-t">
@@ -376,9 +542,39 @@ const ReviewRoleDNA = () => {
           <Button variant="outline" onClick={handleBack}>
             ← Edit Job Description
           </Button>
-          <Button onClick={handleContinue} size="lg" className="transition-all duration-200 hover:scale-105">
-            This Looks Right, Continue →
-          </Button>
+          
+          <div className="flex gap-3">
+            {!isEditMode ? (
+              <>
+                <Button variant="outline" onClick={() => {
+                  setIsEditMode(true);
+                  setEditedEssentials(roleDef.definition_data.definition_data);
+                  setEditedWeights({ ...weights });
+                }}>
+                  Edit Role DNA
+                </Button>
+                <Button onClick={handleContinue} size="lg">
+                  This Looks Right, Continue →
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => {
+                  setIsEditMode(false);
+                  setEditedEssentials(null);
+                  setEditedWeights({});
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => saveChangesMutation.mutate()} 
+                  disabled={!validateWeights() || saveChangesMutation.isPending}
+                >
+                  {saveChangesMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
