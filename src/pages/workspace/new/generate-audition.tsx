@@ -309,8 +309,8 @@ const GenerateAudition = () => {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10">
         <header className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Step 3 of 4: Review Audition Outline</p>
-            <Button variant="outline" onClick={() => navigate("/workspace/new/confirm-role-summary")}>
+            <p className="text-sm text-muted-foreground">Step 4 of 5: Review Audition Outline</p>
+            <Button variant="outline" onClick={() => navigate("/workspace/new/review-role-dna")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>

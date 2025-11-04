@@ -71,11 +71,11 @@ const ConfirmRoleSummary = () => {
 
       toast({
         title: "Project created",
-        description: "Generating your custom audition questions...",
+        description: "Analyzing role DNA...",
       });
 
-      // Navigate to audition generation (orchestrator takes over from here)
-      navigate("/workspace/new/generate-audition");
+      // Navigate to role DNA review
+      navigate("/workspace/new/review-role-dna");
     },
     onError: (error) => {
       const message =
@@ -112,7 +112,7 @@ const ConfirmRoleSummary = () => {
           >
             ← Back
           </Button>
-          <span className="text-sm text-muted-foreground">Step 2 of 4</span>
+          <span className="text-sm text-muted-foreground">Step 2 of 5</span>
         </div>
 
         <div className="space-y-3">

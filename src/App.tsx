@@ -15,6 +15,7 @@ import JdUpload from "./pages/workspace/JdUpload";
 // import JdConfirm from "./pages/workspace/JdConfirm";
 // import CandidatePreview from "./pages/workspace/CandidatePreview";
 import ConfirmRoleSummary from "./pages/workspace/new/ConfirmRoleSummary";
+import ReviewRoleDNA from "./pages/workspace/new/ReviewRoleDNA";
 import GenerateAudition from "./pages/workspace/new/generate-audition";
 import DeployOptions from "./pages/workspace/new/deploy-options";
 import NetworkConfirmed from "./pages/workspace/new/network-confirmed";
@@ -66,6 +67,11 @@ const App = () => {
                 <Route path="/workspace/new/confirm-role-summary" element={
                   <ProtectedRoute>
                     <ConfirmRoleSummary />
+                  </ProtectedRoute>
+                } />
+                <Route path="/workspace/new/review-role-dna" element={
+                  <ProtectedRoute>
+                    <ReviewRoleDNA />
                   </ProtectedRoute>
                 } />
                 <Route path="/workspace/new/generate-audition" element={
