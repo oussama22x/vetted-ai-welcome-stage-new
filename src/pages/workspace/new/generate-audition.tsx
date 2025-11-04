@@ -2,54 +2,32 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { useProjectWizard, type WizardState } from "@/hooks/useProjectWizard";
+import { useProjectWizard } from "@/hooks/useProjectWizard";
 import { supabase } from "@/integrations/supabase/client";
 
-interface RoleDefinitionData {
-  goals: string;
-  stakeholders: string;
-  decision_horizon: string;
-  tools: string;
-  kpis: string;
-  constraints: string;
-  cognitive_type: string;
-  team_topology: string;
-  cultural_tone: string;
-}
-
-interface ContextFlags {
-  role_family: string;
-  seniority: string;
-  is_startup_context: boolean;
-  is_people_management: boolean;
-}
-
-interface FinalRoleDefinition {
-  roleDefinition: RoleDefinitionData;
-  contextFlags: ContextFlags;
-  clarifierResponses: Record<string, string>;
-}
-
-interface WizardStateWithFinal extends WizardState {
-  finalRoleDefinition?: FinalRoleDefinition;
-}
-
-interface AuditionScaffoldResponse {
-  scaffold_data?: {
-    objective?: string;
-    context_frame?: string;
-    inputs?: string[];
-    constraint_dials?: Record<string, number>;
-    chosen_dimensions?: string[];
-    dimension_justification?: string;
-    mechanics?: string[];
-  };
-  scaffold_preview_html?: string;
-}
+type AuditionScaffoldResponse = {
+  status: 'READY' | 'GENERATING' | 'FAILED';
+  bank_id: string;
+  questions?: Array<{
+    question_id: string;
+    dimension: string;
+    archetype_id: string;
+    question_text: string;
+    quality_score: number;
+  }>;
+  role_definition?: any;
+  cache_hit?: boolean;
+  message?: string;
+  elapsed_minutes?: number;
+  estimated_remaining_minutes?: number;
+  retry_after_seconds?: number;
+  error?: string;
+};
 
 const parseEdgeResponse = <T,>(payload: unknown, errorMessage: string): T => {
   if (!payload) {
@@ -72,34 +50,34 @@ const GenerateAudition = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { wizardState } = useProjectWizard();
-
-  const wizardStateWithFinal = wizardState as WizardStateWithFinal;
-  const { finalRoleDefinition } = wizardStateWithFinal;
-  const projectId = wizardStateWithFinal.project_id ?? wizardStateWithFinal.projectId ?? null;
+  const projectId = wizardState.projectId || wizardState.project_id;
 
   useEffect(() => {
-    if (!finalRoleDefinition || !projectId) {
+    if (!projectId) {
       navigate("/workspace/new/confirm-role-summary");
     }
-  }, [finalRoleDefinition, projectId, navigate]);
+  }, [projectId, navigate]);
 
   const scaffoldQuery = useQuery({
-    queryKey: ["audition-scaffold", finalRoleDefinition],
-    enabled: !!finalRoleDefinition,
+    queryKey: ["audition-scaffold", projectId],
+    enabled: !!projectId,
     refetchOnWindowFocus: false,
     retry: 1,
+    refetchInterval: (query) => {
+      // Poll every 10 seconds if status is GENERATING
+      const currentData = query.state.data as AuditionScaffoldResponse | undefined;
+      return currentData?.status === 'GENERATING' ? 10000 : false;
+    },
     queryFn: async (): Promise<AuditionScaffoldResponse> => {
-      if (!finalRoleDefinition) {
-        throw new Error("Missing role definition. Please confirm your Role DNA again.");
+      if (!projectId) {
+        throw new Error("Missing project ID");
       }
 
       const { data: rawResponse, error } = await supabase.functions.invoke(
         "fn_generate_audition_scaffold",
         {
           body: {
-            definition_data: finalRoleDefinition.roleDefinition,
-            context_flags: finalRoleDefinition.contextFlags,
-            clarifier_answers: finalRoleDefinition.clarifierResponses,
+            project_id: projectId,
           },
         },
       );
@@ -122,70 +100,50 @@ const GenerateAudition = () => {
         throw new Error("Missing project information. Please return to the previous step.");
       }
 
-      if (!finalRoleDefinition) {
-        throw new Error("Missing role definition. Please confirm your Role DNA again.");
-      }
-
       const scaffold = scaffoldQuery.data;
 
-      if (!scaffold || !scaffold.scaffold_data || !scaffold.scaffold_preview_html) {
+      if (!scaffold || scaffold.status !== 'READY' || !scaffold.questions) {
         throw new Error("No audition scaffold available to approve.");
       }
 
-      const { roleDefinition, contextFlags, clarifierResponses } = finalRoleDefinition;
-      const definitionPayload = {
-        ...roleDefinition,
-        context_flags: contextFlags,
-        clarifier_responses: clarifierResponses,
-      } as Record<string, unknown>;
-
-      const { data: roleDefinitionRecord, error: roleDefinitionError } = await supabase
+      // Get role definition ID
+      const { data: roleDefData, error: roleDefError } = await supabase
         .from("role_definitions")
-        .upsert(
-          {
-            project_id: projectId,
-            definition_data: definitionPayload,
-          } as any,
-          { onConflict: "project_id" },
-        )
         .select("id")
+        .eq("project_id", projectId)
         .single();
 
-      if (roleDefinitionError) {
-        console.error("Failed to save role definition", roleDefinitionError);
-        throw new Error(roleDefinitionError.message || "Could not save the role definition.");
+      if (roleDefError || !roleDefData) {
+        throw new Error("Role definition not found");
       }
 
-      const roleDefinitionId = roleDefinitionRecord?.id;
-
-      if (!roleDefinitionId) {
-        throw new Error("The role definition could not be saved.");
-      }
-
+      // Save scaffold with selected questions
       const { error: scaffoldError } = await supabase
         .from("audition_scaffolds")
         .upsert(
           {
-            role_definition_id: roleDefinitionId,
-            scaffold_data: scaffold.scaffold_data,
-            scaffold_preview_html: scaffold.scaffold_preview_html,
-            definition_snapshot: definitionPayload,
-          } as any,
+            role_definition_id: roleDefData.id,
+            scaffold_data: { 
+              questions: scaffold.questions, 
+              bank_id: scaffold.bank_id 
+            },
+            scaffold_preview_html: null,
+            definition_snapshot: scaffold.role_definition,
+          },
           { onConflict: "role_definition_id" },
         );
 
       if (scaffoldError) {
-        console.error("Failed to save audition scaffold", scaffoldError);
         throw new Error(scaffoldError.message || "Could not save the audition scaffold.");
       }
 
+      // Update project status
       const { error: projectError } = await supabase
         .from("projects")
         .update({ status: "activation_in_progress" })
         .eq("id", projectId);
 
       if (projectError) {
-        console.error("Failed to update project status", projectError);
         throw new Error(projectError.message || "Could not update the project status.");
       }
     },
@@ -236,25 +194,98 @@ const GenerateAudition = () => {
       return null;
     }
 
+    // Handle GENERATING state
+    if (scaffold.status === 'GENERATING') {
+      const elapsedMinutes = scaffold.elapsed_minutes || 0;
+      const estimatedRemaining = scaffold.estimated_remaining_minutes || 3;
+      
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-20">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="text-center space-y-2">
+              <p className="text-lg font-semibold">
+                Generating Your Custom Question Bank
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {scaffold.message || 'This typically takes 2-3 minutes...'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Elapsed: {elapsedMinutes} min | Estimated remaining: {estimatedRemaining} min
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Handle FAILED state
+    if (scaffold.status === 'FAILED') {
+      return (
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-6 text-center">
+          <p className="text-base font-medium text-destructive">Question Bank Generation Failed</p>
+          <p className="text-sm text-muted-foreground">
+            {scaffold.error || 'An error occurred while generating your question bank. Please try again.'}
+          </p>
+          <Button onClick={() => scaffoldQuery.refetch()}>
+            Retry Generation
+          </Button>
+        </div>
+      );
+    }
+
+    // Handle READY state
+    if (!scaffold.questions || scaffold.questions.length === 0) {
+      return (
+        <div className="p-6 bg-muted/50 rounded-lg">
+          <p className="text-muted-foreground">No questions available</p>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Audition Structure</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Selected Questions</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              {scaffold.questions.length} questions
+              {scaffold.cache_hit && ' (cached)'}
+            </div>
           </CardHeader>
           <CardContent>
-            <div
-              className="prose max-w-none text-sm leading-relaxed dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: scaffold.scaffold_preview_html ?? "" }}
-            />
+            <div className="space-y-4">
+              {scaffold.questions.map((question, index) => (
+                <div key={question.question_id} className="border-l-4 border-primary/30 pl-4 py-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-medium">Q{index + 1}: {question.question_text}</p>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        <span className="bg-muted px-2 py-1 rounded text-xs">
+                          {question.dimension}
+                        </span>
+                        <span className="bg-muted px-2 py-1 rounded text-xs">
+                          {question.archetype_id}
+                        </span>
+                        <span className="bg-muted px-2 py-1 rounded text-xs">
+                          Quality: {question.quality_score}/3
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {scaffold.scaffold_data?.dimension_justification && (
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Rationale:</span>{" "}
-            {scaffold.scaffold_data.dimension_justification}
-          </p>
+        {scaffold.bank_id && (
+          <div className="bg-muted/50 border rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">
+              Bank ID: <span className="font-mono text-xs">{scaffold.bank_id}</span>
+              {scaffold.cache_hit && ' • Using cached question bank'}
+            </p>
+          </div>
         )}
 
         <div className="flex justify-end">

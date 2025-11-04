@@ -2,15 +2,21 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.1";
 
-type Dimension =
-  | "Cognitive"
-  | "Execution"
-  | "Communication"
-  | "Emotional Intelligence"
-  | "Adaptability"
-  | "Judgment";
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
-type DefinitionData = Record<string, unknown>;
+type RoleDefinitionData = {
+  goals: string;
+  stakeholders: string;
+  decision_horizon: string;
+  tools: string;
+  kpis: string;
+  constraints: string;
+  cognitive_type: string;
+  team_topology: string;
+  cultural_tone: string;
+};
 
 type ContextFlags = {
   role_family: string;
@@ -19,511 +25,484 @@ type ContextFlags = {
   is_people_management: boolean;
 };
 
-type ClarifierAnswers = Record<string, unknown>;
-
-type AiScaffoldResponse = {
-  scaffold_data?: {
-    objective?: unknown;
-    context_frame?: unknown;
-    inputs?: unknown;
-    constraint_dials?: unknown;
-    chosen_dimensions?: unknown;
-    dimension_justification?: unknown;
-    mechanics?: unknown;
-  };
-  scaffold_preview_html?: unknown;
+type ClarifierInputs = {
+  ambiguity: number;
+  time_pressure: number;
+  cross_functional: number;
+  customer_facing: number;
+  regulated: number;
+  analytical_data_heavy: number;
 };
+
+type WeightedDimensions = {
+  weights: {
+    cognitive: number;
+    execution: number;
+    communication_collaboration: number;
+    adaptability_learning: number;
+    emotional_intelligence: number;
+    judgment_ethics: number;
+  };
+  rationale: string;
+  bank_id: string;
+};
+
+type FinalRoleDefinition = {
+  definition_data: RoleDefinitionData;
+  context_flags: ContextFlags;
+  clarifier_inputs: ClarifierInputs;
+  weighted_dimensions: WeightedDimensions;
+};
+
+type QuestionObject = {
+  question_id: string;
+  dimension: string;
+  archetype_id: string;
+  question_text: string;
+  context_used: Record<string, unknown>;
+  quality_score: number;
+  generated_at: string;
+};
+
+type RoleMasterBank = {
+  bank_id: string;
+  status: 'GENERATING' | 'READY' | 'FAILED';
+  questions: QuestionObject[];
+  role_family: string;
+  seniority_level: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// ============================================================================
+// CORS HEADERS
+// ============================================================================
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function coerceJson<T>(raw: string): T {
-  let cleaned = raw.trim();
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get or generate role definition for a project
+ */
+async function getOrGenerateRoleDefinition(
+  supabase: any,
+  projectId: string
+): Promise<FinalRoleDefinition> {
+  console.log(`📋 Fetching role definition for project: ${projectId}`);
   
-  // Strip markdown code fences
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  // Check if role definition already exists
+  const { data: existingDef, error: fetchError } = await supabase
+    .from('role_definitions')
+    .select('definition_data')
+    .eq('project_id', projectId)
+    .maybeSingle();
+  
+  if (fetchError) {
+    throw new Error(`Failed to fetch role definition: ${fetchError.message}`);
   }
   
-  // Fallback: extract innermost {...}
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    cleaned = match[0];
+  if (existingDef && existingDef.definition_data) {
+    console.log('✅ Found existing role definition');
+    return existingDef.definition_data as FinalRoleDefinition;
   }
   
-  return JSON.parse(cleaned) as T;
-}
-
-const SYSTEM_PROMPT = `You are an expert Audition Designer, bound by the VettedAI Proof-of-Work Model.
-Your job is to take a "Role Definition" and "Context Flags" and generate a "Proof Scaffold" and "Candidate Preview".
-
-INPUTS:
-Role Definition (Refined): {{refined_definition_data}}
-
-Context Flags: {{context_flags}}
-
-STEP 1: Select Dimensions (Your Core Logic)
-You must follow this logic to select 3-4 dimensions:
-
-Dimension Lookup Table:
-Product Mgmt: Cognitive, Execution, Communication
-Design / UX: Cognitive, Communication, Adaptability
-Sales: Communication, Emotional Intelligence, Execution
-Operations: Execution, Cognitive, Adaptability
-Compliance / Risk: Judgment, Execution, Communication
-Engineering / Tech: Cognitive, Execution, Judgment
-Finance: Cognitive, Judgment, Execution
-Marketing: Communication, Cognitive, Adaptability
-Human Resources: Emotional Intelligence, Communication, Judgment
-Customer Support: Communication, Emotional Intelligence, Execution
-Leadership / Strat: Judgment, Communication, Cognitive
-Growth PM: Cognitive, Execution, Communication
-RevOps: Execution, Cognitive, Adaptability
-UX Research: Cognitive, Communication, Emotional Intelligence
-Logic (in pseudocode):
-base = lookup(context_flags.role_family)
-if context_flags.seniority == "Senior" or "Manager": base.add("Judgment")
-if context_flags.is_startup_context == true: base.add("Adaptability")
-if context_flags.is_people_management == true: base.add("Emotional Intelligence")
-final_dimensions = deduplicate(base)
-dimension_justification = "Based on the role, we are prioritizing [list base dimensions]. We added [modifier] due to [context flag]."
-Ensure at least two of the final dimensions are "high-observability" (Cognitive, Communication, or Execution).
-STEP 2: Generate Scaffold
-Using the final_dimensions and the Role Definition, generate the scaffold.
-
-STEP 3: Format Output
-Return only a valid JSON object in this exact format:
-
-JSON
-{
-  "scaffold_data": {
-    "objective": "...",
-    "context_frame": "...",
-    "inputs": ["...", "..."],
-    "constraint_dials": {
-      "time_limit_min": 25,
-      "ai_tokens": 3
-    },
-    "chosen_dimensions": ["Dimension 1", "Dimension 2", "Dimension 3"],
-    "dimension_justification": "Based on [Role Family], we are prioritizing [Dimension 1, 2, 3]. We also added [Dimension 4] because the role is [Senior/Startup/etc.].",
-    "mechanics": ["...", "..."]
-  },
-  "scaffold_preview_html": "<h3>Your Audition Preview</h3><p><b>Context:</b> ...</p><p><b>Task:</b> ...</p>"
-}`;
-
-const ROLE_DIMENSION_LOOKUP: Record<string, Dimension[]> = {
-  "Product Mgmt": ["Cognitive", "Execution", "Communication"],
-  "Design / UX": ["Cognitive", "Communication", "Adaptability"],
-  Sales: ["Communication", "Emotional Intelligence", "Execution"],
-  Operations: ["Execution", "Cognitive", "Adaptability"],
-  "Compliance / Risk": ["Judgment", "Execution", "Communication"],
-  "Engineering / Tech": ["Cognitive", "Execution", "Judgment"],
-  Finance: ["Cognitive", "Judgment", "Execution"],
-  Marketing: ["Communication", "Cognitive", "Adaptability"],
-  "Human Resources": ["Emotional Intelligence", "Communication", "Judgment"],
-  "Customer Support": ["Communication", "Emotional Intelligence", "Execution"],
-  "Leadership / Strat": ["Judgment", "Communication", "Cognitive"],
-  "Growth PM": ["Cognitive", "Execution", "Communication"],
-  RevOps: ["Execution", "Cognitive", "Adaptability"],
-  "UX Research": ["Cognitive", "Communication", "Emotional Intelligence"],
-};
-
-const HIGH_OBSERVABILITY_DIMENSIONS = new Set<Dimension>([
-  "Cognitive",
-  "Communication",
-  "Execution",
-]);
-
-const DEFAULT_BASE_DIMENSIONS: Dimension[] = [
-  "Cognitive",
-  "Execution",
-  "Communication",
-];
-
-function dedupeDimensions(dimensions: Dimension[]): Dimension[] {
-  const seen = new Set<Dimension>();
-  const result: Dimension[] = [];
-  for (const dimension of dimensions) {
-    if (!seen.has(dimension)) {
-      seen.add(dimension);
-      result.push(dimension);
-    }
+  // Generate new role definition
+  console.log('🔄 Generating new role definition...');
+  
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('job_description, company_name')
+    .eq('id', projectId)
+    .single();
+  
+  if (projectError || !project) {
+    throw new Error('Project not found');
   }
-  return result;
-}
-
-function countHighObservability(dimensions: Dimension[]): number {
-  return dimensions.filter((dim) => HIGH_OBSERVABILITY_DIMENSIONS.has(dim)).length;
-}
-
-function ensureHighObservability(dimensions: Dimension[]): Dimension[] {
-  const result = [...dimensions];
-  for (const dimension of DEFAULT_BASE_DIMENSIONS) {
-    if (countHighObservability(result) >= 2) {
-      break;
-    }
-    if (!result.includes(dimension)) {
-      result.push(dimension);
-    }
-  }
-  return dedupeDimensions(result);
-}
-
-function ensureMinimumDimensions(dimensions: Dimension[]): Dimension[] {
-  const result = [...dimensions];
-  const fallbackOrder: Dimension[] = [
-    "Cognitive",
-    "Execution",
-    "Communication",
-    "Judgment",
-    "Adaptability",
-    "Emotional Intelligence",
-  ];
-  for (const dimension of fallbackOrder) {
-    if (result.length >= 3) {
-      break;
-    }
-    if (!result.includes(dimension)) {
-      result.push(dimension);
-    }
-  }
-  return dedupeDimensions(result);
-}
-
-function trimToMaximum(dimensions: Dimension[]): Dimension[] {
-  let result = [...dimensions];
-  if (result.length <= 4) {
-    return result;
-  }
-
-  // Attempt to drop non high-observability dimensions first while preserving order importance.
-  while (result.length > 4) {
-    const removableIndex = result.findLastIndex((dim) => !HIGH_OBSERVABILITY_DIMENSIONS.has(dim));
-    if (removableIndex !== -1 && result.length > 4) {
-      result.splice(removableIndex, 1);
-    } else {
-      result.pop();
-    }
-  }
-
-  // Ensure we still have at least two high observability dimensions after trimming.
-  if (countHighObservability(result) < 2) {
-    for (const dimension of DEFAULT_BASE_DIMENSIONS) {
-      if (result.includes(dimension)) {
-        continue;
+  
+  // Call fn_generate_role_definition
+  const authHeader = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const { data: roleDefData, error: roleDefError } = await supabase.functions.invoke(
+    'fn_generate_role_definition',
+    {
+      body: {
+        job_description: project.job_description,
+        company_name: project.company_name || undefined
+      },
+      headers: {
+        Authorization: `Bearer ${authHeader}`
       }
-      if (result.length >= 4) {
-        const replacementIndex = result.findIndex((dim) => !HIGH_OBSERVABILITY_DIMENSIONS.has(dim));
-        if (replacementIndex !== -1) {
-          result[replacementIndex] = dimension;
-        }
+    }
+  );
+  
+  if (roleDefError) {
+    throw new Error(`Failed to generate role definition: ${roleDefError.message}`);
+  }
+  
+  if (!roleDefData?.definition_data) {
+    throw new Error('Invalid role definition response');
+  }
+  
+  // Save to database
+  const { error: saveError } = await supabase
+    .from('role_definitions')
+    .insert({
+      project_id: projectId,
+      definition_data: roleDefData.definition_data
+    });
+  
+  if (saveError) {
+    console.warn('⚠️ Failed to save role definition:', saveError.message);
+  }
+  
+  return roleDefData.definition_data as FinalRoleDefinition;
+}
+
+/**
+ * Seeded shuffle for deterministic randomization
+ */
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+function seededShuffle<T>(array: T[], seed: string): T[] {
+  const shuffled = [...array];
+  let hash = hashString(seed);
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    hash = (hash * 9301 + 49297) % 233280;
+    const j = Math.floor((hash / 233280) * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
+}
+
+/**
+ * Select 10 Core questions (highest weighted dimensions)
+ */
+function selectCoreQuestions(
+  questions: QuestionObject[],
+  weights: WeightedDimensions['weights'],
+  seed: string
+): QuestionObject[] {
+  // Get top 3 dimensions by weight
+  const sortedDimensions = Object.entries(weights)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([dim]) => dim);
+  
+  console.log('🎯 Core dimensions:', sortedDimensions);
+  
+  // Filter questions from top 3 dimensions
+  const corePool = questions.filter(q => {
+    const normalizedDim = q.dimension.toLowerCase().replace(/\s+/g, '_').replace(/&/g, '');
+    return sortedDimensions.some(coreDim => coreDim.includes(normalizedDim) || normalizedDim.includes(coreDim));
+  });
+  
+  // Shuffle with seed for determinism
+  const shuffled = seededShuffle(corePool, seed + '_core');
+  
+  // Take 10, ensuring diversity across archetypes
+  const selected: QuestionObject[] = [];
+  const usedArchetypes = new Set<string>();
+  
+  for (const question of shuffled) {
+    if (selected.length >= 10) break;
+    
+    // Prefer unused archetypes
+    if (!usedArchetypes.has(question.archetype_id) || selected.length > 7) {
+      selected.push(question);
+      usedArchetypes.add(question.archetype_id);
+    }
+  }
+  
+  return selected;
+}
+
+/**
+ * Select 10 Variable questions (remaining dimensions)
+ */
+function selectVariableQuestions(
+  questions: QuestionObject[],
+  weights: WeightedDimensions['weights'],
+  coreQuestions: QuestionObject[],
+  seed: string
+): QuestionObject[] {
+  // Get remaining dimensions (not in top 3)
+  const sortedDimensions = Object.entries(weights)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([dim]) => dim);
+  
+  const coreQuestionIds = new Set(coreQuestions.map(q => q.question_id));
+  
+  // Filter questions NOT from top 3 dimensions and NOT already selected
+  const variablePool = questions.filter(q => {
+    if (coreQuestionIds.has(q.question_id)) return false;
+    
+    const normalizedDim = q.dimension.toLowerCase().replace(/\s+/g, '_').replace(/&/g, '');
+    return !sortedDimensions.some(coreDim => coreDim.includes(normalizedDim) || normalizedDim.includes(coreDim));
+  });
+  
+  // Shuffle with seed
+  const shuffled = seededShuffle(variablePool, seed + '_variable');
+  
+  // Take 10, ensuring dimension diversity
+  const selected: QuestionObject[] = [];
+  const dimensionCounts = new Map<string, number>();
+  
+  for (const question of shuffled) {
+    if (selected.length >= 10) break;
+    
+    const dimCount = dimensionCounts.get(question.dimension) || 0;
+    
+    // Limit to max 4 questions per dimension
+    if (dimCount < 4) {
+      selected.push(question);
+      dimensionCounts.set(question.dimension, dimCount + 1);
+    }
+  }
+  
+  return selected;
+}
+
+/**
+ * Main selection logic: 10 Core + 10 Variable
+ */
+function selectQuestions(
+  bank: RoleMasterBank,
+  roleDefinition: FinalRoleDefinition,
+  projectId: string
+): QuestionObject[] {
+  console.log(`🎲 Selecting 20 questions from ${bank.questions.length} available`);
+  
+  if (bank.questions.length < 20) {
+    throw new Error(`Insufficient questions in bank: ${bank.questions.length} (need 20)`);
+  }
+  
+  const seed = projectId; // Use project_id for deterministic selection
+  
+  // Step 1: Select 10 Core questions
+  const coreQuestions = selectCoreQuestions(
+    bank.questions,
+    roleDefinition.weighted_dimensions.weights,
+    seed
+  );
+  
+  console.log(`✅ Selected ${coreQuestions.length} core questions`);
+  
+  // Step 2: Select 10 Variable questions
+  const variableQuestions = selectVariableQuestions(
+    bank.questions,
+    roleDefinition.weighted_dimensions.weights,
+    coreQuestions,
+    seed
+  );
+  
+  console.log(`✅ Selected ${variableQuestions.length} variable questions`);
+  
+  // Combine and return
+  return [...coreQuestions, ...variableQuestions];
+}
+
+/**
+ * Asynchronously invoke fn_ai_question_factory
+ */
+async function invokeQuestionFactory(
+  supabase: any,
+  roleDefinition: FinalRoleDefinition,
+  bankId: string
+): Promise<void> {
+  console.log(`🚀 Triggering fn_ai_question_factory for bank_id: ${bankId}`);
+  
+  try {
+    const authHeader = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    // Fire and forget - don't await
+    supabase.functions.invoke('fn_ai_question_factory', {
+      body: {
+        roleDefinition,
+        bank_id: bankId
+      },
+      headers: {
+        Authorization: `Bearer ${authHeader}`
+      }
+    }).then((result: any) => {
+      if (result.error) {
+        console.error('❌ fn_ai_question_factory error:', result.error);
       } else {
-        result.push(dimension);
+        console.log('✅ fn_ai_question_factory completed successfully');
       }
-      result = dedupeDimensions(result);
-      if (countHighObservability(result) >= 2) {
-        break;
-      }
-    }
+    });
+    
+    console.log('✅ fn_ai_question_factory invoked asynchronously');
+  } catch (error) {
+    console.error('❌ Failed to invoke fn_ai_question_factory:', error);
+    // Don't throw - this is async, should not block response
   }
-
-  return dedupeDimensions(result);
 }
 
-function selectDimensions(contextFlags: ContextFlags) {
-  const baseDimensions = ROLE_DIMENSION_LOOKUP[contextFlags.role_family] ?? DEFAULT_BASE_DIMENSIONS;
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
-  const modifiers: string[] = [];
-  const expanded: Dimension[] = [...baseDimensions];
-
-  if (["Senior", "Manager"].includes(contextFlags.seniority)) {
-    expanded.push("Judgment");
-    modifiers.push("Judgment because the role is senior");
-  }
-
-  if (contextFlags.is_startup_context) {
-    expanded.push("Adaptability");
-    modifiers.push("Adaptability for the startup context");
-  }
-
-  if (contextFlags.is_people_management) {
-    expanded.push("Emotional Intelligence");
-    modifiers.push("Emotional Intelligence to reflect people leadership");
-  }
-
-  let finalDimensions = dedupeDimensions(expanded);
-  finalDimensions = ensureHighObservability(finalDimensions);
-  finalDimensions = ensureMinimumDimensions(finalDimensions);
-  finalDimensions = trimToMaximum(finalDimensions);
-
-  if (countHighObservability(finalDimensions) < 2) {
-    finalDimensions = ensureHighObservability(finalDimensions);
-    finalDimensions = trimToMaximum(finalDimensions);
-  }
-
-  const justificationBase = `Based on the ${contextFlags.role_family || "role"} role family, we are prioritizing ${
-    (ROLE_DIMENSION_LOOKUP[contextFlags.role_family] ?? DEFAULT_BASE_DIMENSIONS).join(", ")
-  }.`;
-
-  const justificationModifiers = modifiers.length
-    ? ` We added ${modifiers.join(" and ")}.`
-    : "";
-
-  return {
-    finalDimensions,
-    dimensionJustification: `${justificationBase}${justificationModifiers}`,
-  };
-}
-
-function normalizeContextFlags(raw: unknown): ContextFlags {
-  const fallback: ContextFlags = {
-    role_family: "Other",
-    seniority: "Not specified",
-    is_startup_context: false,
-    is_people_management: false,
-  };
-
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return fallback;
-  }
-
-  const value = raw as Record<string, unknown>;
-
-  return {
-    role_family: typeof value.role_family === "string" && value.role_family.trim().length > 0
-      ? value.role_family
-      : fallback.role_family,
-    seniority: typeof value.seniority === "string" && value.seniority.trim().length > 0
-      ? value.seniority
-      : fallback.seniority,
-    is_startup_context: typeof value.is_startup_context === "boolean"
-      ? value.is_startup_context
-      : fallback.is_startup_context,
-    is_people_management: typeof value.is_people_management === "boolean"
-      ? value.is_people_management
-      : fallback.is_people_management,
-  };
-}
-
-function mergeClarifierAnswers(definition: DefinitionData, clarifierAnswers: ClarifierAnswers | undefined) {
-  if (!clarifierAnswers || typeof clarifierAnswers !== "object" || Array.isArray(clarifierAnswers)) {
-    return definition;
-  }
-
-  const refined = { ...definition } as Record<string, unknown>;
-  for (const [key, value] of Object.entries(clarifierAnswers)) {
-    if (typeof key !== "string") continue;
-    if (value === null || value === undefined) continue;
-    if (typeof value === "string") {
-      if (value.trim().length === 0) continue;
-      refined[key] = value.trim();
-      continue;
-    }
-    refined[key] = value;
-  }
-  return refined;
-}
-
-function validateDefinitionData(raw: unknown): DefinitionData | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
-  }
-  return raw as DefinitionData;
-}
-
-serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    console.log('🎬 fn_generate_audition_scaffold invoked');
+    
+    // Validate authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Parse request body
+    const { project_id } = await req.json();
+    
+    if (!project_id) {
+      return new Response(JSON.stringify({ error: 'Missing project_id' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Step 1: Get or generate role definition
+    const roleDefinition = await getOrGenerateRoleDefinition(supabase, project_id);
+    
+    // Step 2: Extract bank_id
+    const bankId = roleDefinition.weighted_dimensions?.bank_id;
+    
+    if (!bankId) {
+      throw new Error('Role definition missing bank_id');
+    }
+    
+    console.log(`🏦 Bank ID: ${bankId}`);
+
+    // Step 3: Query role_master_banks
+    const { data: bank, error: bankError } = await supabase
+      .from('role_master_banks')
+      .select('*')
+      .eq('bank_id', bankId)
+      .maybeSingle();
+    
+    if (bankError) {
+      throw new Error(`Failed to query role_master_banks: ${bankError.message}`);
+    }
+
+    // ========================================================================
+    // PATH 1: WARM START (bank exists and is READY)
+    // ========================================================================
+    if (bank && bank.status === 'READY') {
+      console.log('🟢 WARM START: Bank is ready');
+      
+      const selectedQuestions = selectQuestions(bank, roleDefinition, project_id);
+      
+      return new Response(JSON.stringify({
+        status: 'READY',
+        bank_id: bankId,
+        questions: selectedQuestions,
+        role_definition: roleDefinition,
+        cache_hit: true
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ========================================================================
+    // PATH 2: PENDING (bank exists but is GENERATING)
+    // ========================================================================
+    if (bank && bank.status === 'GENERATING') {
+      console.log('🟡 PENDING: Bank is generating');
+      
+      const elapsedMinutes = Math.floor(
+        (Date.now() - new Date(bank.created_at).getTime()) / 60000
       );
+      
+      return new Response(JSON.stringify({
+        status: 'GENERATING',
+        bank_id: bankId,
+        message: 'Your custom question bank is being generated. This typically takes 2-3 minutes.',
+        elapsed_minutes: elapsedMinutes,
+        estimated_remaining_minutes: Math.max(0, 3 - elapsedMinutes),
+        retry_after_seconds: 10
+      }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase environment variables are not configured");
+    // ========================================================================
+    // PATH 3: COLD START (bank does not exist)
+    // ========================================================================
+    console.log('🔵 COLD START: Creating new bank');
+    
+    // Insert new bank with GENERATING status
+    const { error: insertError } = await supabase
+      .from('role_master_banks')
+      .insert({
+        bank_id: bankId,
+        status: 'GENERATING',
+        role_family: roleDefinition.context_flags.role_family,
+        seniority_level: roleDefinition.context_flags.seniority,
+        questions: []
+      });
+    
+    if (insertError) {
+      throw new Error(`Failed to create bank: ${insertError.message}`);
     }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
+    
+    // Asynchronously invoke fn_ai_question_factory
+    await invokeQuestionFactory(supabase, roleDefinition, bankId);
+    
+    return new Response(JSON.stringify({
+      status: 'GENERATING',
+      bank_id: bankId,
+      message: 'Your custom question bank is being generated. This typically takes 2-3 minutes.',
+      elapsed_minutes: 0,
+      estimated_remaining_minutes: 3,
+      retry_after_seconds: 10
+    }), {
+      status: 202,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    let payload: unknown;
-    try {
-      payload = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid JSON payload" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const body = payload as {
-      definition_data?: unknown;
-      context_flags?: unknown;
-      clarifier_answers?: ClarifierAnswers;
-    };
-
-    const definitionData = validateDefinitionData(body.definition_data);
-    if (!definitionData) {
-      return new Response(
-        JSON.stringify({ error: "definition_data must be an object" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const contextFlags = normalizeContextFlags(body.context_flags);
-    const refinedDefinition = mergeClarifierAnswers(definitionData, body.clarifier_answers);
-    const { finalDimensions, dimensionJustification } = selectDimensions(contextFlags);
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const userMessage = `Use the provided data to generate an audition scaffold.\n\nRole Definition (Refined):\n${
-      JSON.stringify(refinedDefinition, null, 2)
-    }\n\nContext Flags:\n${JSON.stringify(contextFlags, null, 2)}\n\nPre-selected Dimensions (apply these exactly):\n${
-      JSON.stringify(finalDimensions)
-    }\n\nDimension Justification Guidance:\n${dimensionJustification}\n\nClarifier Answers (if any):\n${
-      JSON.stringify(body.clarifier_answers ?? {}, null, 2)
-    }\n\nReturn only JSON as described in the system prompt.`;
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash", // fast + cost effective
-        messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
-          {
-            role: "user",
-            content: userMessage,
-          },
-        ],
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errorText);
-
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
-    }
-
-    const completion = await aiResponse.json();
-    const aiMessage = completion?.choices?.[0]?.message?.content;
-
-    let rawContent = "";
-    if (typeof aiMessage === "string") {
-      rawContent = aiMessage.trim();
-    } else if (Array.isArray(aiMessage)) {
-      rawContent = aiMessage
-        .map((part: { text?: string } | string) => {
-          if (typeof part === "string") {
-            return part;
-          }
-          if (part && typeof part.text === "string") {
-            return part.text;
-          }
-          return "";
-        })
-        .join("")
-        .trim();
-    }
-
-    if (!rawContent) {
-      throw new Error("AI response did not include any content");
-    }
-
-    let structuredResult: AiScaffoldResponse;
-    try {
-      structuredResult = coerceJson<AiScaffoldResponse>(rawContent);
-    } catch (parseError) {
-      console.error("Failed to parse AI response (first 500 chars):", rawContent.substring(0, 500));
-      throw new Error("AI response was not valid JSON");
-    }
-
-    if (!structuredResult || typeof structuredResult !== "object") {
-      throw new Error("AI response payload was empty");
-    }
-
-    if (!structuredResult.scaffold_data || typeof structuredResult.scaffold_data !== "object") {
-      throw new Error("AI response is missing scaffold_data");
-    }
-
-    const scaffoldData = { ...structuredResult.scaffold_data } as Record<string, unknown>;
-    scaffoldData.chosen_dimensions = finalDimensions;
-    scaffoldData.dimension_justification = dimensionJustification;
-
-    const responseBody = {
-      scaffold_data: scaffoldData,
-      scaffold_preview_html: structuredResult.scaffold_preview_html ?? "",
-    };
-
-    return new Response(
-      JSON.stringify(responseBody),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
   } catch (error) {
-    console.error("Error in fn_generate_audition_scaffold:", error);
-
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    console.error('❌ Error in fn_generate_audition_scaffold:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    return new Response(JSON.stringify({
+      error: errorMessage,
+      status: 'FAILED'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
