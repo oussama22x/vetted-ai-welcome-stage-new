@@ -263,6 +263,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="goals">
                 <AccordionTrigger>Goals & Objectives</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    What the role aims to achieve. This helps us select questions that test whether candidates can think strategically about desired outcomes and prioritize effectively.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.goals || ""}
@@ -277,6 +280,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="stakeholders">
                 <AccordionTrigger>Stakeholders & Relationships</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    Who the candidate will work with and report to. Questions will assess their ability to navigate cross-functional relationships and communication styles.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.stakeholders || ""}
@@ -291,6 +297,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="decision_horizon">
                 <AccordionTrigger>Decision Horizon</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    The timeframe for decisions this role makes (tactical vs strategic). Determines whether questions focus on immediate execution or long-term planning.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.decision_horizon || ""}
@@ -305,6 +314,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="tools">
                 <AccordionTrigger>Tools & Systems</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    Systems, software, and technical skills required. Questions will test practical knowledge and problem-solving within these specific tools.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.tools || ""}
@@ -319,6 +331,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="kpis">
                 <AccordionTrigger>KPIs & Success Metrics</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    How success is measured in this role. Questions assess whether candidates understand what 'good' looks like and can work backwards from outcomes.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.kpis || ""}
@@ -333,6 +348,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="constraints">
                 <AccordionTrigger>Constraints & Challenges</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    Limitations and difficulties inherent to the role. Questions will test resilience, creativity under pressure, and problem-solving within boundaries.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.constraints || ""}
@@ -347,6 +365,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="cognitive">
                 <AccordionTrigger>Cognitive Type</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    The primary thinking style required (analytical, creative, operational, etc.). Determines question complexity and the type of reasoning assessed.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.cognitive_type || ""}
@@ -361,6 +382,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="team">
                 <AccordionTrigger>Team Topology</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    Team structure and collaboration model. Questions assess fit for working independently, leading others, or thriving in cross-functional environments.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.team_topology || ""}
@@ -375,6 +399,9 @@ const ReviewRoleDNA = () => {
               <AccordionItem value="culture">
                 <AccordionTrigger>Cultural Tone</AccordionTrigger>
                 <AccordionContent>
+                  <div className="mb-3 text-xs text-muted-foreground italic">
+                    The work environment and company values. Questions help identify candidates whose work style and values align with your organization's culture.
+                  </div>
                   {isEditMode ? (
                     <Textarea
                       value={editedEssentials?.cultural_tone || ""}
