@@ -92,7 +92,8 @@ const corsHeaders = {
  */
 async function getOrGenerateRoleDefinition(
   supabase: any,
-  projectId: string
+  projectId: string,
+  authHeader: string
 ): Promise<FinalRoleDefinition> {
   console.log(`📋 Fetching role definition for project: ${projectId}`);
   
@@ -126,23 +127,27 @@ async function getOrGenerateRoleDefinition(
   }
   
   // Call fn_generate_role_definition
-  const authHeader = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const { data: roleDefData, error: roleDefError } = await supabase.functions.invoke(
-    'fn_generate_role_definition',
-    {
-      body: {
-        jd_text: project.job_description,
-        company_name: project.company_name || undefined
-      },
-      headers: {
-        Authorization: `Bearer ${authHeader}`
-      }
-    }
-  );
-  
-  if (roleDefError) {
-    throw new Error(`Failed to generate role definition: ${roleDefError.message}`);
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const resp = await fetch(`${supabaseUrl}/functions/v1/fn_generate_role_definition`, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      jd_text: project.job_description,
+      company_name: project.company_name || undefined,
+    }),
+  });
+
+  if (!resp.ok) {
+    const details = await resp.text();
+    throw new Error(`Failed to generate role definition: ${details || resp.status}`);
   }
+
+  const roleDefData = await resp.json();
   
   if (!roleDefData?.weighted_dimensions?.bank_id) {
     throw new Error('Invalid role definition response: missing bank_id');
@@ -392,7 +397,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Step 1: Get or generate role definition
-    const roleDefinition = await getOrGenerateRoleDefinition(supabase, project_id);
+    const roleDefinition = await getOrGenerateRoleDefinition(supabase, project_id, authHeader);
     
     // Step 2: Extract bank_id
     const bankId = roleDefinition.weighted_dimensions?.bank_id;
