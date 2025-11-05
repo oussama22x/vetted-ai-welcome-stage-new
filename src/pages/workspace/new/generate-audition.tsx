@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown, Brain, Zap, MessageSquare, Lightbulb, Heart, Scale, HelpCircle } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/components/ui/use-toast";
@@ -47,6 +49,15 @@ const parseEdgeResponse = <T,>(payload: unknown, errorMessage: string): T => {
     console.error("Failed to parse edge function response", error);
     throw new Error(errorMessage);
   }
+};
+
+const dimensionConfig: Record<string, { label: string; icon: any; color: string }> = {
+  cognitive: { label: 'Cognitive', icon: Brain, color: 'text-blue-500' },
+  execution: { label: 'Execution', icon: Zap, color: 'text-yellow-500' },
+  communication_collaboration: { label: 'Communication & Collaboration', icon: MessageSquare, color: 'text-green-500' },
+  adaptability_learning: { label: 'Adaptability & Learning Agility', icon: Lightbulb, color: 'text-purple-500' },
+  emotional_intelligence: { label: 'Emotional Intelligence', icon: Heart, color: 'text-pink-500' },
+  judgment_ethics: { label: 'Judgment & Ethics', icon: Scale, color: 'text-indigo-500' },
 };
 
 const GenerateAudition = () => {
@@ -233,6 +244,18 @@ const GenerateAudition = () => {
     },
   });
 
+  const questionsByDimension = useMemo(() => {
+    const scaffold = scaffoldQuery.data;
+    if (!scaffold?.questions || !Array.isArray(scaffold.questions)) return {};
+    
+    return scaffold.questions.reduce((acc: any, question: any) => {
+      const dim = question.dimension || 'other';
+      if (!acc[dim]) acc[dim] = [];
+      acc[dim].push(question);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [scaffoldQuery.data]);
+
   const renderContent = () => {
     if (scaffoldQuery.isLoading) {
       return (
@@ -392,33 +415,85 @@ const GenerateAudition = () => {
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Selected Questions</CardTitle>
-            <div className="text-sm text-muted-foreground">
-              {scaffold.questions.length} questions
-              {scaffold.cache_hit && ' (cached)'}
+          <CardHeader className="space-y-2 pb-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <CardTitle>Approved Audition Outline</CardTitle>
+                <CardDescription>
+                  {scaffold.questions.length} carefully selected questions across {Object.keys(questionsByDimension).length} performance dimensions
+                </CardDescription>
+              </div>
+              {scaffold.cache_hit && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  ♻️ Cached Bank
+                </Badge>
+              )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {scaffold.questions.map((question, index) => (
-                <div key={question.question_id} className="border-l-4 border-primary/30 pl-4 py-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="font-medium">Q{index + 1}: {question.question_text}</p>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        <span className="bg-muted px-2 py-1 rounded text-xs">
-                          {question.dimension}
-                        </span>
-                        <span className="bg-muted px-2 py-1 rounded text-xs">
-                          {question.archetype_id}
-                        </span>
-                      </div>
-                    </div>
+          <CardContent className="space-y-6">
+            {scaffold.bank_id && (
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                      Question Bank ID
+                    </p>
+                    <p className="font-mono text-sm">{scaffold.bank_id}</p>
                   </div>
+                  {scaffold.cache_hit && (
+                    <Badge variant="secondary" className="text-xs">
+                      Using cached questions
+                    </Badge>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+            
+            <Accordion type="single" collapsible className="w-full space-y-2">
+              {Object.entries(questionsByDimension).map(([dimension, questions]) => {
+                const config = dimensionConfig[dimension];
+                const Icon = config?.icon || HelpCircle;
+                const label = config?.label || dimension;
+                const iconColor = config?.color || 'text-muted-foreground';
+                const questionList = questions as any[];
+                
+                return (
+                  <AccordionItem key={dimension} value={dimension} className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn("h-5 w-5", iconColor)} />
+                        <span className="font-semibold">{label}</span>
+                        <Badge variant="secondary" className="ml-2">
+                          {questionList.length} question{questionList.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                      <div className="space-y-4 pt-2">
+                        {questionList.map((question: any, index: number) => (
+                          <div
+                            key={question.question_id}
+                            className="border-l-4 border-primary/30 pl-4 py-3 bg-muted/20 rounded-r"
+                          >
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium leading-relaxed">
+                                <span className="text-muted-foreground mr-2">Q{index + 1}:</span>
+                                {question.question_text}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {question.archetype_id?.replace(/_/g, ' ')}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           </CardContent>
         </Card>
 
