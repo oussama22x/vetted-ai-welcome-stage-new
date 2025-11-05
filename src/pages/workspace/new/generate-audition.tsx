@@ -358,25 +358,24 @@ const GenerateAudition = () => {
                     <ul className="space-y-2 text-xs text-muted-foreground">
                       <li className="flex items-start gap-2">
                         <span className="text-primary mt-0.5">•</span>
-                        <span>Generating 50+ custom questions across 6 performance dimensions</span>
+                        <span>Generating 40 custom questions across 6 performance dimensions</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-primary mt-0.5">•</span>
-                        <span>Evaluating each question for quality and relevance (1-3 stars)</span>
+                        <span>Evaluating each question for quality (scored 0-3)</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-primary mt-0.5">•</span>
-                        <span>Selecting the top 20 questions that match your role profile</span>
+                        <span>Selecting 20 questions: 10 from top dimensions, 10 from secondary</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-primary mt-0.5">•</span>
-                        <span>Creating a reusable question bank for similar roles</span>
+                        <span>Caching your question bank for instant reuse on similar roles</span>
                       </li>
                     </ul>
                     <div className="pt-2 border-t border-border">
                       <p className="text-xs text-muted-foreground">
-                        💡 <span className="font-medium">First-time generation</span> takes 2-3 minutes. 
-                        Similar roles in the future will load <span className="font-medium">instantly</span> from this bank!
+                        💡 First-time generation takes 2-3 minutes. Similar roles will load instantly from cache!
                       </p>
                     </div>
                   </div>
